@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { EndpointBranches } from "./deployment-info";
 import {
   getDatabaseInfo,
   getExpectedDatabaseBranch,
@@ -7,21 +8,28 @@ import {
   isDeploymentInfoAllowed,
 } from "./deployment-info";
 
+const testEndpointBranches = {
+  "test-development-pooler": "development",
+  "test-staging-pooler": "staging",
+  "test-production-pooler": "production",
+} satisfies EndpointBranches;
+
 describe("getDatabaseInfo", () => {
   it.each([
-    ["ep-round-poetry-adiz3f0j-pooler", "development"],
-    ["ep-autumn-breeze-adl44bsc-pooler", "staging"],
-    ["ep-hidden-math-adfk34xh-pooler", "production"],
-  ])("detects the %s Neon endpoint as %s", (endpoint, selected) => {
+    ["test-development-pooler", "development"],
+    ["test-staging-pooler", "staging"],
+    ["test-production-pooler", "production"],
+  ] as const)("detects the %s test endpoint as %s", (endpoint, selected) => {
     const info = getDatabaseInfo(
-      `postgresql://user:pass@${endpoint}.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require`,
+      `postgresql://user:pass@${endpoint}.invalid/testdb?sslmode=require`,
+      testEndpointBranches,
     );
 
     expect(info).toMatchObject({
       configured: true,
       selected,
       endpoint,
-      databaseName: "neondb",
+      databaseName: "testdb",
       pooled: true,
     });
   });
@@ -43,7 +51,8 @@ describe("getDatabaseInfo", () => {
   it("marks an unknown database endpoint", () => {
     expect(
       getDatabaseInfo(
-        "postgresql://user:pass@ep-example.us-east-1.aws.neon.tech/neondb",
+        "postgresql://user:pass@unknown-database.invalid/testdb",
+        testEndpointBranches,
       ),
     ).toMatchObject({
       configured: true,

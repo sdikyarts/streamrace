@@ -1,25 +1,36 @@
 import {
+  type EndpointBranches,
   getDatabaseInfo,
   getExpectedDatabaseBranch,
   isDatabaseBranch,
   isDeploymentInfoAllowed,
 } from "@/lib/deployment-info";
 
-export async function GET(request: Request) {
+type DeploymentEnvironment = Record<string, string | undefined>;
+
+export function createDeploymentInfoResponse({
+  request,
+  env = process.env,
+  endpointBranches,
+}: {
+  request: Request;
+  env?: DeploymentEnvironment;
+  endpointBranches?: EndpointBranches;
+}) {
   if (
     !isDeploymentInfoAllowed({
-      expectedToken: process.env.DEPLOYMENT_INFO_TOKEN,
-      isVercelDeployment: process.env.VERCEL === "1",
+      expectedToken: env.DEPLOYMENT_INFO_TOKEN,
+      isVercelDeployment: env.VERCEL === "1",
       providedToken: request.headers.get("x-deployment-info-token"),
     })
   ) {
     return new Response(null, { status: 404 });
   }
 
-  const database = getDatabaseInfo(process.env.DATABASE_URL);
+  const database = getDatabaseInfo(env.DATABASE_URL, endpointBranches);
   const expectedDatabaseBranch = getExpectedDatabaseBranch({
-    vercelEnv: process.env.VERCEL_ENV,
-    gitBranch: process.env.VERCEL_GIT_COMMIT_REF,
+    vercelEnv: env.VERCEL_ENV,
+    gitBranch: env.VERCEL_GIT_COMMIT_REF,
   });
   const selectedDatabaseBranch = database.selected;
   const matchesExpected = isDatabaseBranch(selectedDatabaseBranch)
@@ -28,11 +39,11 @@ export async function GET(request: Request) {
 
   return Response.json({
     deployment: {
-      vercelEnv: process.env.VERCEL_ENV ?? "local",
-      vercelTargetEnv: process.env.VERCEL_TARGET_ENV ?? null,
-      gitBranch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
-      deploymentUrl: process.env.VERCEL_URL ?? null,
-      branchUrl: process.env.VERCEL_BRANCH_URL ?? null,
+      vercelEnv: env.VERCEL_ENV ?? "local",
+      vercelTargetEnv: env.VERCEL_TARGET_ENV ?? null,
+      gitBranch: env.VERCEL_GIT_COMMIT_REF ?? null,
+      deploymentUrl: env.VERCEL_URL ?? null,
+      branchUrl: env.VERCEL_BRANCH_URL ?? null,
     },
     database: {
       ...database,
@@ -40,4 +51,8 @@ export async function GET(request: Request) {
       matchesExpected,
     },
   });
+}
+
+export async function GET(request: Request) {
+  return createDeploymentInfoResponse({ request });
 }

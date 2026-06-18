@@ -4,6 +4,7 @@ export type SelectedDatabaseBranch =
   | "missing"
   | "unknown"
   | "invalid";
+export type EndpointBranches = Record<string, DatabaseBranch>;
 
 type DatabaseInfo = {
   configured: boolean;
@@ -13,13 +14,16 @@ type DatabaseInfo = {
   pooled: boolean | null;
 };
 
-const neonEndpointBranches: Record<string, DatabaseBranch> = {
+const neonEndpointBranches: EndpointBranches = {
   "ep-round-poetry-adiz3f0j-pooler": "development",
   "ep-autumn-breeze-adl44bsc-pooler": "staging",
   "ep-hidden-math-adfk34xh-pooler": "production",
 };
 
-export function getDatabaseInfo(databaseUrl: string | undefined): DatabaseInfo {
+export function getDatabaseInfo(
+  databaseUrl: string | undefined,
+  endpointBranches: EndpointBranches = neonEndpointBranches,
+): DatabaseInfo {
   if (!databaseUrl) {
     return {
       configured: false,
@@ -37,7 +41,7 @@ export function getDatabaseInfo(databaseUrl: string | undefined): DatabaseInfo {
     return {
       configured: true,
       selected: endpoint
-        ? (neonEndpointBranches[endpoint] ?? "unknown")
+        ? (endpointBranches[endpoint] ?? "unknown")
         : "unknown",
       endpoint,
       databaseName: parsed.pathname.replace(/^\//, "") || null,
