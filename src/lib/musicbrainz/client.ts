@@ -1,29 +1,15 @@
+import {
+  createRateLimitedFetch,
+  STREAMRACE_USER_AGENT,
+} from "../rate-limited-fetch";
+
 const API_BASE = "https://musicbrainz.org/ws/2";
-const USER_AGENT = "streamrace/1.0 (stewieisacrown@gmail.com)";
-const RATE_LIMIT_MS = 1050;
-
-let lastRequestAt = 0;
-
-async function rateLimitedFetch(url: string): Promise<Response> {
-  const now = Date.now();
-  const wait = RATE_LIMIT_MS - (now - lastRequestAt);
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt = Date.now();
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      Accept: "application/json",
-    },
-  });
-
-  if (response.status === 429) {
-    await new Promise((r) => setTimeout(r, 5000));
-    return rateLimitedFetch(url);
-  }
-
-  return response;
-}
+const rateLimitedFetch = createRateLimitedFetch({
+  headers: {
+    "User-Agent": STREAMRACE_USER_AGENT,
+    Accept: "application/json",
+  },
+});
 
 export async function getMbidFromSpotifyId(spotifyArtistId: string): Promise<string | null> {
   const spotifyUrl = `https://open.spotify.com/artist/${spotifyArtistId}`;

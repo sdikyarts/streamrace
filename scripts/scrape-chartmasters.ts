@@ -14,6 +14,25 @@ config({ path: ".env" });
 
 const SOURCE_URL = "https://chartmasters.org/most-streamed-artists-ever-on-spotify/";
 
+type DataTablesApi = {
+  rows(): {
+    count(): number;
+    data(): {
+      toArray(): unknown[];
+    };
+  };
+};
+
+type DataTablesWindow = Window & {
+  $?: {
+    fn?: {
+      dataTable?: {
+        tables(options: { api: true }): DataTablesApi;
+      };
+    };
+  };
+};
+
 function parseStreams(raw: string): bigint {
   return BigInt(raw.replace(/[^\d]/g, "") || "0");
 }
@@ -54,15 +73,22 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
     );
 
     // Try DataTables JS API first — gives us hidden columns (gender, language, genre, country)
-    const dtRows = await page.evaluate(() => {
+    const dtRows = await page.evaluate((): unknown[][] | null => {
       try {
-        const tables = (window as any).$.fn.dataTable.tables({ api: true });
+        const dataTable = (window as DataTablesWindow).$?.fn?.dataTable;
+        const tables = dataTable?.tables({ api: true });
         if (!tables || tables.rows().count() === 0) return null;
         return tables
           .rows()
           .data()
           .toArray()
-          .map((row: any) => (Array.isArray(row) ? row : Object.values(row)));
+          .map((row: unknown) =>
+            Array.isArray(row)
+              ? row
+              : row && typeof row === "object"
+                ? Object.values(row)
+                : [row],
+          );
       } catch {
         return null;
       }
@@ -84,30 +110,31 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
       );
     }
 
-    return await page.evaluate(() => {
-      const rows: any[] = [];
+    const domRows = await page.evaluate((): unknown[][] => {
+      const rows: unknown[][] = [];
       document.querySelectorAll("table tbody tr").forEach((tr) => {
         const cells = tr.querySelectorAll("td");
         if (cells.length < 6) return;
         const anchor = cells[2]?.querySelector("a");
-        rows.push({
-          rank: cells[0]?.textContent?.trim() ?? "",
-          gRank: cells[1]?.textContent?.trim() ?? "",
-          artistName: anchor?.textContent?.trim() ?? cells[2]?.textContent?.trim() ?? "",
-          href: anchor?.getAttribute("href") ?? null,
-          leadStreams: cells[3]?.textContent?.trim() ?? "0",
-          featStreams: cells[4]?.textContent?.trim() ?? "0",
-          allCredits: cells[5]?.textContent?.trim() ?? "0",
-        });
+        rows.push([
+          cells[0]?.textContent?.trim() ?? "",
+          cells[1]?.textContent?.trim() ?? "",
+          anchor?.outerHTML ?? cells[2]?.textContent?.trim() ?? "",
+          cells[3]?.textContent?.trim() ?? "0",
+          cells[4]?.textContent?.trim() ?? "0",
+          cells[5]?.textContent?.trim() ?? "0",
+        ]);
       });
       return rows;
     });
+
+    return parseDtRows(domRows);
   } finally {
     await browser.close();
   }
 }
 
-function parseDtRows(rows: any[][]): ParsedAllCreditsRow[] {
+function parseDtRows(rows: unknown[][]): ParsedAllCreditsRow[] {
   const parsedRows: ParsedAllCreditsRow[] = [];
 
   for (const cells of rows) {
