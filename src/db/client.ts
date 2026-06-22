@@ -27,11 +27,9 @@ export function createDatabaseClient(connectionString: string): DatabaseClient {
 }
 
 export function getDatabaseClient() {
-  if (!globalThis.streamRaceDatabaseClient) {
-    globalThis.streamRaceDatabaseClient = createDatabaseClient(
-      getRuntimeDatabaseUrl(),
-    );
-  }
+  globalThis.streamRaceDatabaseClient ??= createDatabaseClient(
+    getRuntimeDatabaseUrl(),
+  );
 
   return globalThis.streamRaceDatabaseClient;
 }

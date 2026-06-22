@@ -39,7 +39,9 @@ export async function getArtistCountry(mbid: string): Promise<string | null> {
 // Last-resort fallback: search by name and return country from the top result.
 // Only use when Spotify ID lookup and Wikidata both failed.
 export async function searchArtistCountryByName(name: string): Promise<string | null> {
-  const url = `${API_BASE}/artist?query=artist:${encodeURIComponent(`"${name}"`)}&limit=3&fmt=json`;
+  const quotedName = `"${name}"`;
+  const query = `artist:${encodeURIComponent(quotedName)}`;
+  const url = `${API_BASE}/artist?query=${query}&limit=3&fmt=json`;
 
   const response = await rateLimitedFetch(url);
   if (!response.ok) return null;

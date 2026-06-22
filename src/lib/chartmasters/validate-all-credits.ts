@@ -47,7 +47,9 @@ export function validateFullAllCreditsRows(rows: ParsedAllCreditsRow[]) {
 
     const existingRankRow = ranks.get(row.allCreditRank);
 
-    if (existingRankRow !== undefined) {
+    if (existingRankRow === undefined) {
+      ranks.set(row.allCreditRank, rowNumber);
+    } else {
       anomalies.push({
         severity: "error",
         code: "DUPLICATE_RANK",
@@ -56,14 +58,14 @@ export function validateFullAllCreditsRows(rows: ParsedAllCreditsRow[]) {
         message: `Duplicate all-credit rank ${row.allCreditRank}; first seen on parsed row ${existingRankRow}.`,
         rawValue: String(row.allCreditRank),
       });
-    } else {
-      ranks.set(row.allCreditRank, rowNumber);
     }
 
     if (row.spotifyArtistId) {
       const existingSpotifyIdRow = spotifyArtistIds.get(row.spotifyArtistId);
 
-      if (existingSpotifyIdRow !== undefined) {
+      if (existingSpotifyIdRow === undefined) {
+        spotifyArtistIds.set(row.spotifyArtistId, rowNumber);
+      } else {
         anomalies.push({
           severity: "error",
           code: "DUPLICATE_SPOTIFY_ID",
@@ -72,8 +74,6 @@ export function validateFullAllCreditsRows(rows: ParsedAllCreditsRow[]) {
           message: `Duplicate Spotify artist ID ${row.spotifyArtistId}; first seen on parsed row ${existingSpotifyIdRow}.`,
           rawValue: row.spotifyArtistId,
         });
-      } else {
-        spotifyArtistIds.set(row.spotifyArtistId, rowNumber);
       }
     }
 
