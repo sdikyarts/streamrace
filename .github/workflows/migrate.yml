@@ -32,4 +32,7 @@ jobs:
           DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
           DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
           DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
-        run: npm run db:migrate
+          NO_COLOR: "1"
+          FORCE_COLOR: "0"
+        shell: bash
+        run: npm run db:migrate 2>&1
