@@ -35,4 +35,6 @@ jobs:
           NO_COLOR: "1"
           FORCE_COLOR: "0"
         shell: bash
-        run: npm run db:migrate 2>&1
+        run: |
+          set -o pipefail
+          npm run db:migrate 2>&1 | tr '\r' '\n'
