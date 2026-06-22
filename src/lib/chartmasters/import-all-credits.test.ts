@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { StreamRaceDb } from "../../db/client";
 import {
@@ -127,7 +127,7 @@ function createFakeDb({
   previousCurrents?: PreviousCurrent[];
   openPeriods?: { artistId: string }[];
   dropouts?: { artistId: string; exitAllCreditRank: number | null }[];
-  transactionError?: Error;
+  transactionError?: unknown;
   omitArtistKey?: string;
   omitSnapshotForArtistId?: string;
 } = {}) {
@@ -463,5 +463,60 @@ describe("importAllCreditsRows", () => {
       status: "failed",
       errorMessage: "boom",
     });
+  });
+
+  it("records non-Error throw values as stringified error messages", async () => {
+    const fake = createFakeDb({ transactionError: "plain string error" });
+
+    await expect(
+      importAllCreditsRows({
+        db: fake.db,
+        rows: makeRows(),
+        sourceDate: "2026-06-22",
+        collectionMethod: "markdown",
+      }),
+    ).rejects.toBe("plain string error");
+
+    expect(
+      fake.updates.find((updated) => updated.table === "dataIngestionRuns")?.set,
+    ).toMatchObject({
+      status: "failed",
+      errorMessage: "plain string error",
+    });
+  });
+});
+
+describe("importAllCreditsRows validation error handling", () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.doUnmock("./validate-all-credits");
+  });
+
+  it("re-throws non-AllCreditsValidationError validation errors without recording anomalies", async () => {
+    vi.resetModules();
+    vi.doMock("./validate-all-credits", () => ({
+      AllCreditsValidationError,
+      addLeadRankInDataset: (rows: ParsedAllCreditsRow[]) =>
+        rows.map((r) => ({ ...r, leadRankInDataset: 1 })),
+      validateFullAllCreditsRows: () => {
+        throw new TypeError("unexpected validation error");
+      },
+    }));
+
+    const { importAllCreditsRows: importFn } = await import("./import-all-credits");
+    const fake = createFakeDb();
+
+    await expect(
+      importFn({
+        db: fake.db,
+        rows: makeRows(),
+        sourceDate: "2026-06-22",
+        collectionMethod: "markdown",
+      }),
+    ).rejects.toThrow("unexpected validation error");
+
+    expect(
+      fake.inserts.find((inserted) => inserted.table === "ingestionAnomalies"),
+    ).toBeUndefined();
   });
 });
