@@ -15,7 +15,8 @@
     "db:studio": "drizzle-kit studio",
     "import:chartmasters:file": "tsx scripts/import-chartmasters-file.ts",
     "enrich:spotify": "tsx scripts/enrich-artists-spotify.ts",
-    "enrich:musicbrainz": "tsx scripts/enrich-artists-musicbrainz.ts"
+    "enrich:musicbrainz": "tsx scripts/enrich-artists-musicbrainz.ts",
+    "scrape:chartmasters": "tsx scripts/scrape-chartmasters.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -41,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "pg": "^8.22.0",
+    "puppeteer": "^25.1.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5",

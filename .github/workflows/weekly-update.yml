@@ -1,0 +1,42 @@
+name: Weekly Update
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'   # 3:00 AM UTC every Sunday
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+jobs:
+  musicbrainz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        include:
+          - name: production
+            app_env: production
+          - name: staging
+            app_env: staging
+      fail-fast: false
+
+    name: MusicBrainz (${{ matrix.name }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Enrich artists from MusicBrainz (country, NULL only)
+        run: npm run enrich:musicbrainz
+        env:
+          APP_ENV: ${{ matrix.app_env }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}

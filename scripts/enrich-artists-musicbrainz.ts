@@ -1,10 +1,10 @@
 import { config } from "dotenv";
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { createDatabaseClient } from "../src/db/client";
 import { artists } from "../src/db/schema";
 import { getDirectDatabaseUrl } from "../src/lib/env";
-import { getArtistCountry, getMbidFromSpotifyId } from "../src/lib/musicbrainz/client";
+import { getArtistCountry, getMbidFromSpotifyId, searchArtistCountryByName } from "../src/lib/musicbrainz/client";
 import { getCountryBySpotifyId } from "../src/lib/wikidata/client";
 
 config({ path: ".env" });
@@ -16,7 +16,7 @@ async function main() {
     const rows = await client.db
       .select({ id: artists.id, spotifyArtistId: artists.spotifyArtistId, displayName: artists.displayName })
       .from(artists)
-      .where(isNotNull(artists.spotifyArtistId));
+      .where(and(isNotNull(artists.spotifyArtistId), isNull(artists.country)));
 
     const needsCountry = rows.filter((r) => r.spotifyArtistId !== null);
     console.log(`Looking up country for ${needsCountry.length} artists via MusicBrainz...`);
@@ -28,7 +28,8 @@ async function main() {
     for (const [i, row] of needsCountry.entries()) {
       const mbid = await getMbidFromSpotifyId(row.spotifyArtistId!);
       const mbCountry = mbid ? await getArtistCountry(mbid) : null;
-      const country = mbCountry ?? await getCountryBySpotifyId(row.spotifyArtistId!);
+      const wikidataCountry = mbCountry ?? await getCountryBySpotifyId(row.spotifyArtistId!);
+      const country = wikidataCountry ?? await searchArtistCountryByName(row.displayName);
 
       if (country) {
         await client.db
