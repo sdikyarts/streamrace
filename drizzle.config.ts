@@ -5,6 +5,9 @@ import { defineConfig } from "drizzle-kit";
 config({ path: ".env" });
 
 function getCurrentBranch(): string {
+  if (process.env.GITHUB_REF_NAME) {
+    return process.env.GITHUB_REF_NAME;
+  }
   try {
     return execSync("git branch --show-current", { encoding: "utf8" }).trim();
   } catch {
