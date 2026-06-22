@@ -110,6 +110,7 @@ function makeRows() {
     rawGRank: null,
     spotifyArtistId: null,
     chartmastersUrl: null,
+    imageUrl: null,
   });
 
   return rows;

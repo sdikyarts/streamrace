@@ -117,6 +117,6 @@ export function addLeadRankInDataset(
 
   return rows.map((row) => ({
     ...row,
-    leadRankInDataset: rankByIdentity.get(rowIdentity(row)) ?? 0,
+    leadRankInDataset: rankByIdentity.get(rowIdentity(row))!,
   }));
 }

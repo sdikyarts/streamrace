@@ -171,10 +171,6 @@ async function recordAnomalies({
   importRunId: string;
   anomalies: IngestionAnomalyInput[];
 }) {
-  if (anomalies.length === 0) {
-    return;
-  }
-
   await db.insert(ingestionAnomalies).values(
     anomalies.map((anomaly) => ({
       importRunId,

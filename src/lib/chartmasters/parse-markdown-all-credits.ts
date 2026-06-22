@@ -101,7 +101,7 @@ function parseAllCreditsRow(cells: string[], lineNumber: number) {
   const [rankCell, gRankCell, artistCell, leadCell, featCell, allCreditCell] =
     cells;
 
-  if (!rankCell || !gRankCell || !artistCell || !leadCell || !featCell) {
+  if (!rankCell || !artistCell || !leadCell || !featCell) {
     throw new Error(`Malformed ChartMasters row at line ${lineNumber}.`);
   }
 
@@ -125,7 +125,7 @@ function parseAllCreditsRow(cells: string[], lineNumber: number) {
     imageUrl: null,
     leadStreams: parseStreamCell(leadCell),
     nonLeadStreams: parseStreamCell(featCell),
-    allCreditStreams: parseStreamCell(allCreditCell ?? ""),
+    allCreditStreams: parseStreamCell(allCreditCell!),
     dataFreshnessLabel: getDataFreshnessLabel(artistCell, linkEndIndex),
   } satisfies ParsedAllCreditsRow;
 }

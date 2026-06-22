@@ -52,8 +52,26 @@ not a table
 
   it("rejects malformed rows", () => {
     expect(() =>
-      parseMarkdownAllCredits("| 1 |  | Artist | 10 | 1 | 11 |"),
+      parseMarkdownAllCredits("| 1 | 2 |  | 10 | 1 | 11 |"),
     ).toThrow("Malformed ChartMasters row");
+  });
+
+  it("parses blank G Rank cells as null rawGRank", () => {
+    const rows = parseMarkdownAllCredits("| 1 |  | Artist | 10 | 1 | 11 |");
+
+    expect(rows[0]).toMatchObject({ rawGRank: null, artistName: "Artist" });
+  });
+
+  it("captures freshness label from unlinked artist cells", () => {
+    const rows = parseMarkdownAllCredits(
+      "| 1 | 2 | Artist Name *recent data* | 10 | 1 | 11 |",
+    );
+
+    expect(rows[0]).toMatchObject({
+      artistName: "Artist Name *recent data*",
+      dataFreshnessLabel: "recent data",
+      chartmastersUrl: null,
+    });
   });
 
   it("rejects invalid rank and stream cells", () => {

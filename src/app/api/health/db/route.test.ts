@@ -4,6 +4,7 @@ type HealthDbOptions = {
   latestImport?: Record<string, unknown> | null;
   rankedCount?: number;
   playableCount?: number;
+  undefinedCounts?: boolean;
   executeError?: Error;
 };
 
@@ -37,6 +38,7 @@ function createHealthDb({
   },
   rankedCount = 900,
   playableCount = 900,
+  undefinedCounts = false,
   executeError,
 }: HealthDbOptions = {}) {
   let selectCall = 0;
@@ -54,11 +56,11 @@ function createHealthDb({
         },
         where() {
           if (callNumber === 2) {
-            return Promise.resolve([{ value: rankedCount }]);
+            return Promise.resolve(undefinedCounts ? [] : [{ value: rankedCount }]);
           }
 
           if (callNumber === 3) {
-            return Promise.resolve([{ value: playableCount }]);
+            return Promise.resolve(undefinedCounts ? [] : [{ value: playableCount }]);
           }
 
           return builder;
@@ -181,5 +183,29 @@ describe("GET /api/health/db", () => {
 
     expect(response.status).toBe(503);
     expect(body.message).toBe("Database connectivity check failed.");
+  });
+
+  it("uses 'development' as appEnv when neither VERCEL_ENV nor NODE_ENV is set", async () => {
+    delete mutableEnv()["DATABASE_URL"];
+    delete mutableEnv()["VERCEL_ENV"];
+    delete mutableEnv()["NODE_ENV"];
+    const { GET } = await loadRoute(createHealthDb());
+
+    const body = await (await GET()).json();
+
+    expect(body.appEnv).toBe("development");
+  });
+
+  it("falls back to 0 when count queries return no rows", async () => {
+    mutableEnv()["DATABASE_URL"] = "postgres://runtime";
+    const { GET } = await loadRoute(
+      createHealthDb({ undefinedCounts: true, latestImport: null }),
+    );
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.currentRankedArtists).toBe(0);
+    expect(body.playableArtists).toBe(0);
   });
 });

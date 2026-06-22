@@ -97,5 +97,10 @@ describe("MusicBrainz client", () => {
 
     client = await loadClient(new Response("failed", { status: 500 }));
     await expect(client.searchArtistCountryByName("Artist")).resolves.toBeNull();
+
+    client = await loadClient(
+      Response.json({ artists: [{ name: "Artist", country: "US" }] }),
+    );
+    await expect(client.searchArtistCountryByName("Artist")).resolves.toBeNull();
   });
 });
