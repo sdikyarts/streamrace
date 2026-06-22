@@ -108,33 +108,36 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
 }
 
 function parseDtRows(rows: any[][]): ParsedAllCreditsRow[] {
-  return rows
-    .map((cells, i) => {
-      const rank = parseRank(String(cells[0] ?? ""));
-      if (!rank) return null;
+  const parsedRows: ParsedAllCreditsRow[] = [];
 
-      const artistCell = String(cells[2] ?? "");
-      const hrefMatch = artistCell.match(/href="([^"]+)"/);
-      const nameMatch = artistCell.match(/>([^<]+)</);
-      const href = hrefMatch?.[1] ?? null;
-      const artistName = nameMatch?.[1]?.trim() ?? artistCell.replace(/<[^>]+>/g, "").trim();
+  for (const cells of rows) {
+    const rank = parseRank(String(cells[0] ?? ""));
+    if (!rank) continue;
 
-      return {
-        allCreditRank: rank,
-        rawGRank: parseRank(String(cells[1] ?? "")),
-        artistName,
-        spotifyArtistId: getSpotifyArtistId(href),
-        chartmastersUrl: href,
-        leadStreams: parseStreams(String(cells[3] ?? "")),
-        nonLeadStreams: parseStreams(String(cells[4] ?? "")),
-        allCreditStreams: parseStreams(String(cells[5] ?? "")),
-        gender: cells[6] ? String(cells[6]).trim() || null : null,
-        language: cells[7] ? String(cells[7]).trim() || null : null,
-        genre: cells[8] ? String(cells[8]).trim() || null : null,
-        country: cells[9] ? String(cells[9]).trim() || null : null,
-      } satisfies ParsedAllCreditsRow;
-    })
-    .filter((r): r is ParsedAllCreditsRow => r !== null);
+    const artistCell = String(cells[2] ?? "");
+    const hrefMatch = artistCell.match(/href="([^"]+)"/);
+    const nameMatch = artistCell.match(/>([^<]+)</);
+    const href = hrefMatch?.[1] ?? null;
+    const artistName =
+      nameMatch?.[1]?.trim() ?? artistCell.replace(/<[^>]+>/g, "").trim();
+
+    parsedRows.push({
+      allCreditRank: rank,
+      rawGRank: parseRank(String(cells[1] ?? "")),
+      artistName,
+      spotifyArtistId: getSpotifyArtistId(href),
+      chartmastersUrl: href,
+      leadStreams: parseStreams(String(cells[3] ?? "")),
+      nonLeadStreams: parseStreams(String(cells[4] ?? "")),
+      allCreditStreams: parseStreams(String(cells[5] ?? "")),
+      gender: cells[6] ? String(cells[6]).trim() || null : null,
+      language: cells[7] ? String(cells[7]).trim() || null : null,
+      genre: cells[8] ? String(cells[8]).trim() || null : null,
+      country: cells[9] ? String(cells[9]).trim() || null : null,
+    });
+  }
+
+  return parsedRows;
 }
 
 async function main() {
