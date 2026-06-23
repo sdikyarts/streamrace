@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/db-migrate.ts",
     "db:studio": "drizzle-kit studio",
     "import:chartmasters:file": "tsx scripts/import-chartmasters-file.ts",
     "enrich:spotify": "tsx scripts/enrich-artists-spotify.ts",
