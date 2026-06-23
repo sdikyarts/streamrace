@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -51,3 +51,12 @@ jobs:
           DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+
+      - name: Enrich artists from MusicBrainz
+        run: npm run enrich:musicbrainz
+        env:
+          APP_ENV: ${{ matrix.app_env }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
