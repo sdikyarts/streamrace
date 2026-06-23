@@ -60,6 +60,18 @@ describe("getDatabaseInfo", () => {
       pooled: false,
     });
   });
+
+  it("returns unknown and not pooled for a URL whose hostname has an empty first segment", () => {
+    expect(
+      getDatabaseInfo("postgresql://user:pass@.test.invalid/db", testEndpointBranches),
+    ).toMatchObject({
+      configured: true,
+      selected: "unknown",
+      endpoint: null,
+      databaseName: "db",
+      pooled: false,
+    });
+  });
 });
 
 describe("getExpectedDatabaseBranch", () => {
