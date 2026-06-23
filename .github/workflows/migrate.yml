@@ -36,7 +36,6 @@ jobs:
           FORCE_COLOR: "0"
         shell: bash
         run: |
-          npm run db:migrate > /tmp/migrate.log 2>&1
-          exit_code=$?
+          npm run db:migrate > /tmp/migrate.log 2>&1 || exit_code=$?
           sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/migrate.log | tr '\r' '\n'
-          exit $exit_code
+          exit ${exit_code:-0}
