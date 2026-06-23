@@ -38,4 +38,8 @@ jobs:
         run: |
           npm run db:migrate > /tmp/migrate.log 2>&1 || exit_code=$?
           sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/migrate.log | tr '\r' '\n'
+          if [ -n "$exit_code" ]; then
+            echo "=== raw log (non-printable chars visible) ==="
+            cat -v /tmp/migrate.log | tr '\r' '\n'
+          fi
           exit ${exit_code:-0}
