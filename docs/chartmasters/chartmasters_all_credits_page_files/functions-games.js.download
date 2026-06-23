@@ -1,0 +1,1075 @@
+
+/* functions-games.js — Refactored & Visually Unified (drop-in)
+ * Covers all games present in the existing implementation:
+ *  - Guess the Album (#cmg-game-container)
+ *  - Over/Under 1B Streams (#cmg-overunder-container)
+ *  - Album Streams Range (#cmg-albumstreams-container)
+ *  - Find Artists Letters (#cmg-artist-letters-container)
+ *  - Who Has More Listeners? (#cmg-morelisteners-container)
+ *  - CSPC Over/Under 10M (#cmg-cspc-overunder-container)
+ *  - Who Has More Followers? (#cmg-morefollows-container)
+ *  - Biggest Hit on the Album (#cmg-biggesthit-container)
+ *  - First or Second Biggest Hit? (#cmg-firstsecond-container)
+ *  - Find the Fake Album (#cmg-fakealbum-container)
+ *
+ * Endpoints preserved (WordPress AJAX):
+ *  - cmg_get_overunder_question / cmg_submit_overunder_score
+ *  - cmg_get_albumstreams_question / cmg_submit_albumstreams_score
+ *  - cmg_fetch_album_round / cmg_submit_albumcover_score
+ *  - cmg_get_morelisteners_question / cmg_submit_morelisteners_score
+ *  - cmg_get_cspc_ou_question / cmg_submit_cspc_ou_score
+ *  - cmg_get_morefollows_question / cmg_submit_morefollows_score
+ *  - cmg_get_biggesthit_question / cmg_submit_biggesthit_score
+ *  - cmg_get_firstsecond_question / cmg_submit_firstsecond_score
+ *  - cmg_get_fakealbum_question / cmg_submit_fakealbum_score
+ *  - cmg_get_artistletters_letters / cmg_check_artist_guess / cmg_submit_artistletters_score
+ */
+
+(function () {
+  'use strict';
+
+  // ================== UI KIT (one place, no inline styles) ==================
+  (function injectStyles(){
+    const css = `
+:root{
+  --cmg-bg:#0f1115; --cmg-surface:#141922; --cmg-elev:#1b2433;
+  --cmg-text:#e8ecf3; --cmg-muted:#a2aec2;
+  --cmg-primary:#3a86ff; --cmg-accent:#9b59b6;
+  --cmg-ok:#22c55e; --cmg-bad:#ef4444; --cmg-gold:#ffd166;
+  --cmg-radius:12px; --cmg-gap:12px; --cmg-pad:14px; --cmg-shadow:0 6px 18px rgba(0,0,0,.25);
+  --cmg-reserved: calc(26px   /* badge */
+                      + 44px  /* title area */
+                      + 120px /* buttons (1–2 rows) */
+                      + 56px  /* feedback */
+                      + 40px  /* vertical padding/margins */
+                     );
+}
+.cmg-root{color:var(--cmg-text); background:var(--cmg-surface); border-radius:var(--cmg-radius); padding:var(--cmg-pad); box-shadow:var(--cmg-shadow);
+  max-height:100svh;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  overflow:auto;}
+.cmg-root *{box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+.cmg-center{text-align:center;}
+.cmg-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--cmg-elev);color:var(--cmg-muted);font-size:12px;margin-bottom:8px;}
+.cmg-title{font-size:18px;margin:8px 0 10px; color: var(--cmg-text) !important;word-break:break-word; overflow-wrap:anywhere; }
+.cmg-img{max-width:100%;width:auto;height:auto;max-height:calc(100svh - var(--cmg-reserved));border-radius:10px;display:block;margin:8px auto; object-fit:contain;}
+.cmg-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.cmg-btn{appearance:none;border:0;border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px;cursor:pointer;background:#fff;color:#111;border:2px solid #111;transition:transform .06s ease,box-shadow .2s ease,opacity .2s;}
+.cmg-btn.is-primary{background:var(--cmg-primary);color:#fff;border:0;}
+.cmg-btn:disabled{opacity:.55;cursor:not-allowed;}
+.cmg-feedback{padding:10px;border-radius:10px;font-weight:700;margin-top:10px;min-height:56px; line-height:1.25;}
+.cmg-correct{background:var(--cmg-ok);color:#fff;}
+.cmg-wrong{background:var(--cmg-bad);color:#fff;}
+.cmg-card{background:#fff;color:#111;border:2px solid #ccc;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.12);transition:transform .06s,box-shadow .2s,background .15s,color .15s;}
+.cmg-card:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.16);}
+.cmg-card.is-disabled{opacity:.6;pointer-events:none;}
+.cmg-card.correct{background:var(--cmg-ok)!important;color:#fff;border-color:var(--cmg-ok);}
+.cmg-card.wrong{background:var(--cmg-bad)!important;color:#fff;border-color:var(--cmg-bad);}
+.cmg-card__img{width:100%;height:160px;object-fit:cover;border-radius:12px;display:block;}
+.cmg-card__title{font-weight:800;font-size:18px;margin:10px 0 0;}
+.cmg-tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0 10px;}
+.cmg-tag{background:var(--cmg-elev);color:var(--cmg-text);padding:8px 12px;border-radius:10px;font-weight:800;font-size:18px;min-width:46px;text-align:center;}
+.cmg-result{background:var(--cmg-elev);border-radius:12px;padding:14px;text-align:center; color: var(--cmg-text) !important;}
+canvas.cmg-chart{display:block;margin:10px auto 0;max-width:600px;width:100% !important;
+  height:320px !important;
+}
+.cmg-link{color:var(--cmg-text);text-decoration:underline;}
+.cmg-splash-img{
+  width:200px;
+  height:200px;
+  object-fit:cover;   /* fills 200x200, crops if needed */
+  border-radius:12px;
+  display:block;
+  margin:8px auto;
+}
+@media (max-width:420px){
+  .cmg-card__img{ height:240px !important; }
+}
+    `;
+    const s=document.createElement('style'); s.textContent=css; document.head.appendChild(s);
+  })();
+
+  // ================== Utilities & Shared Helpers ==================
+  const COPY = {
+    loading: 'Loading...',
+    couldNotLoad: 'Could not load data.',
+    scorePrefix: 'You scored',
+    outOfTen: 'out of 10!',
+    comeBackAlbums: 'Come back tomorrow for a new set of albums!',
+    comeBackSongs: 'Come back tomorrow for a new set of songs!',
+    comeBackArtists: 'Come back tomorrow for a new set of artists!',
+    comeBackLetters: 'Come back tomorrow for a new set of letters!',
+    playMore: 'Play more games',
+  };
+
+    const DEFAULT_HOLD_MS = 1800;
+    function getHoldMs(containerEl){
+      const attr = containerEl?.dataset?.hold;
+      if (attr && !isNaN(parseInt(attr,10))) return parseInt(attr,10);
+      if (typeof window.CMG_HOLD_MS === 'number') return window.CMG_HOLD_MS;
+      return DEFAULT_HOLD_MS;
+    }
+  const safe = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+
+  const fmtStreams = (n) => {
+    const num = Number(n)||0;
+    if (num >= 1e9) return (num/1e9).toFixed(2)+'B';
+    if (num >= 1e6) return (num/1e6).toFixed(1)+'M';
+    return num.toLocaleString();
+  };
+  const fmtCspc = (n) => {
+    const num = Number(n)||0;
+    if (num >= 1e9) return (num/1e9).toFixed(2)+'B';
+    return (num/1e6).toFixed(1)+'M';
+  };
+  const funMessage = (s) => s===10?'Legend.':(s>=8?'On fire.':(s>=6?'Nice run.':(s>=4?'Warming up.':'Tough set. Try again tomorrow.')));
+
+  const ajaxUrl = () => (window.cm_ajax_object && cm_ajax_object.ajax_url) || window.ajaxurl || '/wp-admin/admin-ajax.php';
+  const post = (action, body={}) =>
+    fetch(ajaxUrl(), { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams(Object.assign({action}, body)) }).then(r=>r.json());
+
+  function renderBarChart(canvasId, chart, total, userScore, color = '#3a86ff', highlight='#ffd166') {
+    const el = document.getElementById(canvasId);
+    if (!el || !window.Chart) return;
+    const labels = Array.from({ length: chart.length }, (_, i) => String(i)).reverse();
+    const data = [...chart].reverse().map(v => +(v/total*100).toFixed(2));
+    const bg = [...chart].reverse().map((_, idx) => idx === (chart.length-1 - userScore) ? highlight : color);
+    new Chart(el.getContext('2d'), {
+      type:'bar',
+      data:{ labels, datasets:[{ data, backgroundColor:bg }] },
+      options:{ indexAxis:'y', responsive:true,maintainAspectRatio: false,
+        scales:{ x:{ beginAtZero:true, max:100 }, y:{type: 'category', autoSkip: false} },
+        plugins:{ legend:{ display:false } } }
+    });
+  }
+
+  function share(container, text) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cmg-row';
+    const btn = document.createElement('button');
+    btn.className = 'cmg-btn is-primary';
+    btn.textContent = 'Share your score';
+    btn.onclick = () => {
+      const full = `${text} https://chartmasters.org/games/`;
+      if (navigator.share) navigator.share({ text: full, url:'https://chartmasters.org/games/' });
+      else { navigator.clipboard.writeText(full); alert('Score copied to clipboard!'); }
+    };
+    wrap.appendChild(btn);
+    container.appendChild(wrap);
+  }
+
+  // Small DOM helpers to standardize per-step templates
+  function qBadge(i,total=10){ return `<span class="cmg-badge">Question ${i}/${total}</span>`; }
+  function resultShell(inner){ return `<div class="cmg-result">${inner}</div>`; }
+  function playMoreHTML(){ return `<a class="cmg-link" href="https://chartmasters.org/games/">${COPY.playMore}</a>`; }
+  
+  function gateGame(containerId, startFn, opts = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof startFn !== 'function') return;
+    
+    const img = el.dataset.splash || opts.image || '';
+    const label = opts.buttonText || 'Play';
+    
+    el.innerHTML = `
+    <div class="cmg-root cmg-center">
+      ${img ? `<img class="cmg-splash-img" src="${img}" alt="" loading="lazy">` : ''}
+      <div class="cmg-row">
+        <button type="button" class="cmg-btn is-primary cmg-btn--play">${label}</button>
+      </div>
+    </div>
+    `;
+    
+        el.querySelector('.cmg-btn--play').onclick = () => {
+        el.innerHTML = '';      // clear splash
+        startFn();              // run the game’s existing init (it renders into the same container)
+        };
+    }
+      // ================== Generic 10-round Engine ==================
+      function createRoundGame({container, rounds=10, loadAction, submitAction, getLoadBody, onRenderQuestion, onRenderFinish}) {
+        let score = 0, round = 0;
+    
+        function load() {
+        container.innerHTML = resultShell(COPY.loading);
+        const base = { index: round };
+        const body = (typeof getLoadBody === 'function') ? Object.assign({}, base, getLoadBody({ round })) : base;
+    
+        post(loadAction, body).then(res => {
+          if (!res?.success || !res.data) {
+            container.innerHTML = resultShell(COPY.couldNotLoad);
+            return;
+          }
+          onRenderQuestion({
+            data: res.data,
+            round,
+            score,
+            answer: (wasRight) => {
+              if (wasRight) score++;
+              setTimeout(() => {
+                round++;
+                if (round < rounds) load();
+                else finish();
+              }, getHoldMs(container));
+            }
+          });
+        });
+      }
+    
+      function finish() {
+        if (!submitAction) { onRenderFinish?.({ score }); return; }  // allow non-submitting modes
+        post(submitAction, { score }).then(res => {
+          onRenderFinish({
+            score,
+            chart: res?.data?.chart,
+            total: res?.data?.total,
+            userScore: res?.data?.user_score ?? res?.data?.userScore
+          });
+        });
+      }
+    load();
+  }
+
+  // ================== Games ==================
+
+  // Over/Under 1B Streams (tracks)
+  function initOverUnderGame() {
+    const el = document.getElementById('cmg-overunder-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_overunder_question',
+      submitAction: 'cmg_submit_overunder_score',
+      onRenderQuestion: ({data, round, answer}) => {
+        const pc = parseInt(data.playcount,10);
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            ${qBadge(data.index + 1)}
+            ${data.image_url ? `<img class="cmg-img" src="${safe(data.image_url)}" alt="${safe(data.title)} cover">` : ''}
+            <p class="cmg-title">${safe(data.artist)} – <strong>${safe(data.title)}</strong></p>
+            <div class="cmg-row">
+              <button class="cmg-btn" data-a="0">Under 1B</button>
+              <button class="cmg-btn" data-a="1">Over 1B</button>
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('button[data-a]').forEach(b=>{
+          b.onclick=()=>{
+            const wasRight = parseInt(b.dataset.a,10) === parseInt(data.over,10);
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight ? 'cmg-correct' : 'cmg-wrong');
+            fb.innerHTML = (wasRight ? '✅ ' : '❌ ') + `${safe(data.title)} by ${safe(data.artist)} has ${fmtStreams(pc)} streams.`;
+            el.querySelectorAll('button[data-a]').forEach(x=>x.disabled=true);
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-overunder-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <p>${funMessage(score)}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${COPY.comeBackSongs}</div>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#3a86ff');
+        share(el, `🎯 I got ${score}/10 in Over or Under 1B Streams!`);
+      }
+    });
+  }
+
+  // Album Streams Range
+  function initAlbumStreamsGame() {
+    const el = document.getElementById('cmg-albumstreams-container');
+    if (!el) return;
+    const isPast = el.dataset.past === '1';
+    const gameDate = el.dataset.date || null;
+    const options = ['<1B','1B–3B','3B–8B','>8B'];
+
+  createRoundGame({
+    container: el,
+    loadAction: 'cmg_get_albumstreams_question',
+    submitAction: isPast ? null : 'cmg_submit_albumstreams_score',
+    getLoadBody: () => (gameDate ? { date: gameDate } : {}),
+
+    onRenderQuestion: ({ data: d, round, answer }) => {
+      el.innerHTML = `
+        <div class="cmg-root cmg-center">
+          ${qBadge((d.index ?? round) + 1)}
+          ${d.image_url ? `<img class="cmg-img" src="${safe(d.image_url)}" alt="${safe(d.title)} cover">` : ''}
+          <p class="cmg-title">${safe(d.artist)} – <strong>${safe(d.title)}</strong></p>
+          <div class="cmg-row">
+            ${options.map(o=>`<button class="cmg-btn range" data-v="${o}">${o}</button>`).join('')}
+          </div>
+          <div id="fb" class="cmg-feedback cmg-center"></div>
+        </div>`;
+
+      el.querySelectorAll('.range').forEach(btn=>{
+        btn.onclick=()=>{
+          const right = (d.bucket === btn.dataset.v);
+          const fb = el.querySelector('#fb');
+          fb.className = 'cmg-feedback ' + (right?'cmg-correct':'cmg-wrong');
+          fb.innerHTML = right
+            ? `✅ ${safe(d.title)} by ${safe(d.artist)} has ${fmtStreams(d.playcount)} streams.`
+            : `❌ It was ${safe(d.bucket)}. (${fmtStreams(d.playcount)} streams)`;
+          el.querySelectorAll('.range').forEach(b=>b.disabled=true);
+          answer(right);
+        };
+      });
+    },
+
+    onRenderFinish: ({ score, chart, total, userScore }) => {
+      if (isPast) {
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <p>${funMessage(score)}</p>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        return;
+      }
+      const id = 'cmg-albumstreams-chart';
+      el.innerHTML = resultShell(`
+        <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+        <p>${funMessage(score)}</p>
+        <canvas id="${id}" class="cmg-chart"></canvas>
+        <div class="cmg-row">${COPY.comeBackAlbums}</div>
+        <div class="cmg-row">${playMoreHTML()}</div>
+      `);
+      if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#9b59b6');
+      share(el, `🎯 I scored ${score}/10 in Album Streams Range!`);
+    }
+  });
+  }
+
+  // Guess the Album (4-choice)
+  function initGuessAlbumGame() {
+  const el = document.getElementById('cmg-game-container');
+  if (!el) return;
+
+  const used = [];
+
+  createRoundGame({
+    container: el,
+    loadAction: 'cmg_fetch_album_round',
+    submitAction: 'cmg_submit_albumcover_score',
+    getLoadBody: () => ({ used: used.join(',') }),
+
+    onRenderQuestion: ({ data: d, round, answer }) => {
+      // Track used ids as soon as we receive the question
+      if (d?.id) used.push(d.id);
+
+      el.innerHTML = `
+        <div class="cmg-root cmg-center">
+          ${qBadge((d.index ?? round) + 1)}
+          ${d.image_url ? `<img class="cmg-img" src="${safe(d.image_url)}" alt="${safe(d.correct)} cover">` : ''}
+          <div class="cmg-row">
+            ${d.options.map(o=>`<button class="cmg-btn g" data-v="${safe(o)}">${safe(o)}</button>`).join('')}
+          </div>
+          <div id="fb" class="cmg-feedback cmg-center"></div>
+        </div>`;
+
+      el.querySelectorAll('.g').forEach(b=>{
+        b.onclick=()=>{
+          const wasRight = b.dataset.v === d.correct;
+          const fb = el.querySelector('#fb');
+          fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+          fb.textContent = wasRight
+            ? `✅ ${safe(d.correct)} by ${safe(d.artist)}.`
+            : `❌ It was ${safe(d.correct)} by ${safe(d.artist)}.`;
+          el.querySelectorAll('.g').forEach(x=>x.disabled=true);
+          answer(wasRight);
+        };
+      });
+    },
+
+    onRenderFinish: ({ score, chart, total, userScore }) => {
+      const id='cmg-albumcover-chart';
+      el.innerHTML = resultShell(`
+        <p>🎉 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+        <canvas id="${id}" class="cmg-chart"></canvas>
+        <div class="cmg-row"><button id="restart" class="cmg-btn">Play Again</button></div>
+        <div class="cmg-row">${playMoreHTML()}</div>
+      `);
+      if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#22c55e');
+      share(el, `🎉 I scored ${score}/10 in Guess the Album!`);
+      el.querySelector('#restart').onclick = () => { used.length = 0; initGuessAlbumGame(); };
+    }
+  });
+  }
+
+  // Who Has More Listeners? (A/B)
+  function initMoreListenersGame() {
+    const el = document.getElementById('cmg-morelisteners-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_morelisteners_question',
+      submitAction: 'cmg_submit_morelisteners_score',
+      onRenderQuestion: ({data, answer}) => {
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            <div class="cmg-row">
+              ${['a','b'].map(k=>`
+                <div class="cmg-card" data-choice="${k.toUpperCase()}">
+                  <img class="cmg-card__img" src="${safe(data[k].image)}" alt="${safe(data[k].name)}">
+                  <p class="cmg-card__title">${safe(data[k].name)}</p>
+                </div>`).join('')}
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('.cmg-card').forEach(card=>{
+          card.onclick=()=>{
+            const guess = card.dataset.choice;
+            const wasRight = guess === data.correct;
+            const aName=data.a.name, bName=data.b.name;
+            const aCount=parseInt(data.ml1,10).toLocaleString(), bCount=parseInt(data.ml2,10).toLocaleString();
+            el.querySelectorAll('.cmg-card').forEach(c=>c.classList.add('is-disabled'));
+            card.classList.add(wasRight?'correct':'wrong');
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+            fb.innerHTML = `${wasRight?'✅':'❌'} ${safe(aName)}: ${aCount}<br>${safe(bName)}: ${bCount}`;
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-listeners-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${COPY.comeBackArtists}</div>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#f39c12');
+        share(el, `🎯 I scored ${score}/10 in Who Has More Listeners?`);
+      }
+    });
+  }
+
+  // Who Has More Followers? (A/B)
+  function initMoreFollowersGame() {
+    const el = document.getElementById('cmg-morefollows-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_morefollows_question',
+      submitAction: 'cmg_submit_morefollows_score',
+      onRenderQuestion: ({data, answer}) => {
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            <div class="cmg-row">
+              ${['a','b'].map(k=>`
+                <div class="cmg-card" data-choice="${k.toUpperCase()}">
+                  <img class="cmg-card__img" src="${safe(data[k].image)}" alt="${safe(data[k].name)}">
+                  <p class="cmg-card__title">${safe(data[k].name)}</p>
+                </div>`).join('')}
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('.cmg-card').forEach(card=>{
+          card.onclick=()=>{
+            const guess = card.dataset.choice;
+            const wasRight = guess === data.correct;
+            const aName=data.a.name, bName=data.b.name;
+            const aCount=parseInt(data.f1,10).toLocaleString(), bCount=parseInt(data.f2,10).toLocaleString();
+            el.querySelectorAll('.cmg-card').forEach(c=>c.classList.add('is-disabled'));
+            card.classList.add(wasRight?'correct':'wrong');
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+            fb.innerHTML = `${wasRight?'✅':'❌'} ${safe(aName)}: ${aCount} followers<br>${safe(bName)}: ${bCount} followers`;
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-followers-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${COPY.comeBackArtists}</div>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#9b59b6');
+        share(el, `🎯 I scored ${score}/10 in Who Has More Followers?`);
+      }
+    });
+  }
+
+  // CSPC Over/Under (10M)
+  function initCspcOverUnderGame() {
+    const el = document.getElementById('cmg-cspc-overunder-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_cspc_ou_question',
+      submitAction: 'cmg_submit_cspc_ou_score',
+      onRenderQuestion: ({data, answer}) => {
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            ${qBadge(data.index + 1)}
+            ${data.image_url ? `<img class="cmg-img" src="${safe(data.image_url)}" alt="${safe(data.title)} cover">` : ''}
+            <p class="cmg-title">${safe(data.artist)} – <strong>${safe(data.title)}</strong></p>
+            <div class="cmg-row">
+              <button class="cmg-btn" data-a="1">Over 10M</button>
+              <button class="cmg-btn" data-a="0">Under 10M</button>
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('button[data-a]').forEach(b=>{
+          b.onclick=()=>{
+            const pc = parseInt(data.cspc,10);
+            const wasRight = parseInt(b.dataset.a,10) === parseInt(data.over,10);
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight ? 'cmg-correct' : 'cmg-wrong');
+            fb.innerHTML = `${wasRight?'✅':'❌'} ${safe(data.title)} has sold ${fmtStreams(pc)} units.`;
+            el.querySelectorAll('button[data-a]').forEach(x=>x.disabled=true);
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-cspc-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <p>${funMessage(score)}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${COPY.comeBackAlbums}</div>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#3a86ff');
+        share(el, `🎯 I got ${score}/10 in Over/Under 10M CSPC!`);
+      }
+    });
+  }
+
+  // Biggest Hit on the Album
+  function initBiggestHitGame() {
+    const el = document.getElementById('cmg-biggesthit-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_biggesthit_question',
+      submitAction: 'cmg_submit_biggesthit_score',
+      onRenderQuestion: ({data, answer}) => {
+        const album = data.album, options = data.options || [];
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            ${qBadge(data.index + 1)}
+            <img class="cmg-img" src="${safe(album.image)}" alt="${safe(album.title)} cover">
+            <p class="cmg-title"><strong>${safe(album.artist)}</strong> – ${safe(album.title)}</p>
+            <div class="cmg-row">
+              ${options.map(o=>`<button class="cmg-btn bh" data-t="${safe(o.title)}">${safe(o.title)}</button>`).join('')}
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('.bh').forEach(btn=>{
+          btn.onclick=()=>{
+            const correctVal = (typeof data.correct === 'number') ? (opts[data.correct] || '') : (data.correct || '');
+            const wasRight = btn.dataset.t === correctVal;
+            const correctOpt = options.find(o=>o.title===data.correct);
+            const pc = correctOpt ? correctOpt.playcount : 0;
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+            fb.innerHTML = `${wasRight?'✅':'❌'} ${safe(data.correct)} is the biggest hit (${fmtStreams(pc)} streams).`;
+            el.querySelectorAll('.bh').forEach(x=>x.disabled=true);
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-bh-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#9b59b6');
+        share(el, `🎯 I scored ${score}/10 in Biggest Hit on the Album!`);
+      }
+    });
+  }
+
+  // First or Second Biggest Hit? (#1 or #2)
+  function initFirstSecondHitGame() {
+    const el = document.getElementById('cmg-firstsecond-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_firstsecond_question',
+      submitAction: 'cmg_submit_firstsecond_score',
+      onRenderQuestion: ({data, answer}) => {
+        const a = data.artist, s = data.song;
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            ${a?.image ? `<img class="cmg-img" src="${safe(a.image)}" alt="${safe(a.name)}">` : ''}
+            <p class="cmg-title"><strong>${safe(a.name)}</strong></p>
+            <p>Is <strong>${safe(s.title)}</strong> ${safe(a.name)}'s #1 most-streamed song or #2?</p>
+            <div class="cmg-row">
+              <button class="cmg-btn r" data-r="1">#1</button>
+              <button class="cmg-btn r" data-r="2">#2</button>
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('.r').forEach(b=>{
+          b.onclick=()=>{
+            const wasRight = parseInt(b.dataset.r,10) === parseInt(data.correct,10);
+            const r1=data.top.rank1, r2=data.top.rank2;
+            const fb = el.querySelector('#fb');
+
+            fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+            const streams = (parseInt(data.correct,10) === 1) ? r1.streams : r2.streams;
+            fb.innerHTML = `${wasRight ? '✅' : '❌'} #1 is ${safe(r1.title)} (${fmtStreams(r1.streams)}), #2 is ${safe(r2.title)} (${fmtStreams(r2.streams)}).`;
+            el.querySelectorAll('.r').forEach(x=>x.disabled=true);
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-firstsecond-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${COPY.comeBackArtists}</div>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#2ecc71');
+        share(el, `🎯 I scored ${score}/10 in First or Second Biggest Hit?`);
+      }
+    });
+  }
+
+  // Find the Fake Album
+  function initFindFakeAlbumGame() {
+    const el = document.getElementById('cmg-fakealbum-container');
+    if (!el) return;
+    createRoundGame({
+      container: el,
+      loadAction: 'cmg_get_fakealbum_question',
+      submitAction: 'cmg_submit_fakealbum_score',
+      onRenderQuestion: ({data, answer}) => {
+        const a = data.artist, opts = data.options || [];
+        el.innerHTML = `
+          <div class="cmg-root cmg-center">
+            ${a?.image ? `<img class="cmg-img" src="${safe(a.image)}" alt="${safe(a.name)}">` : ''}
+            <p class="cmg-title"><strong>${safe(a.name)}</strong></p>
+            <div class="cmg-row">
+              ${opts.map(t=>`<button class="cmg-btn f" data-t="${safe(t)}">${safe(t)}</button>`).join('')}
+            </div>
+            <div id="fb" class="cmg-feedback cmg-center"></div>
+          </div>`;
+        el.querySelectorAll('.f').forEach(btn=>{
+          btn.onclick=()=>{
+            const correctVal = data.fake; // always a string from backend
+            const wasRight = btn.dataset.t === correctVal;
+
+            const fb = el.querySelector('#fb');
+            fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+            fb.innerHTML = wasRight ? `✅ ${safe(correctVal)} was the fake album.` : `❌ Fake album was ${safe(correctVal)}.`;
+            el.querySelectorAll('.f').forEach(x=>x.disabled=true);
+            answer(wasRight);
+          };
+        });
+      },
+      onRenderFinish: ({score, chart, total, userScore}) => {
+        const id='cmg-fakealbum-chart';
+        el.innerHTML = resultShell(`
+          <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+          <canvas id="${id}" class="cmg-chart"></canvas>
+          <div class="cmg-row">${playMoreHTML()}</div>
+        `);
+        if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#e67e22');
+        share(el, `🎯 I scored ${score}/10 in Find the Fake Album!`);
+      }
+    });
+  }
+
+  // Find Artists Letters (single round)
+  /*
+  function initFindArtistsLettersGame() {
+    const el = document.getElementById('cmg-artist-letters-container');
+    if (!el) return;
+    post('cmg_get_artistletters_letters').then(res=>{
+      if (!res?.success || !res.data?.letters || !Array.isArray(res.data.letters)) {
+        el.innerHTML = resultShell('Could not load letter set.');
+        return;
+      }
+      run(res.data.letters, res.data.date);
+    });
+
+    function run(letters, gameDate){
+      const guessed = new Set(); let score=0;
+      el.innerHTML = `
+        <div class="cmg-root cmg-center">
+          <h3 class="cmg-title">Find artist names using all these letters:</h3>
+          <div class="cmg-tags">${letters.map(ch=>`<span class="cmg-tag">${safe(ch)}</span>`).join('')}</div>
+          <div class="cmg-row">
+            <input id="artist-guess" class="cmg-btn" style="background:#fff;color:#111;border:2px solid #111;width:260px;text-align:left;font-weight:500;" type="text" placeholder="Type artist name" aria-label="Artist name">
+            <button id="submit-guess" class="cmg-btn">Submit</button>
+            <button id="stop-game" class="cmg-btn">Stop</button>
+          </div>
+          <div id="guess-results" class="cmg-result" style="margin-top:10px;text-align:left;max-width:740px;margin-left:auto;margin-right:auto;"></div>
+          <div id="score-counter" class="cmg-row">Score: 0</div>
+        </div>`;
+      const input = el.querySelector('#artist-guess');
+      const results = el.querySelector('#guess-results');
+      const scoreEl = el.querySelector('#score-counter');
+      function submit(){
+        const val = (input.value||'').trim().toLowerCase();
+        if (!val || guessed.has(val)) return;
+        post('cmg_check_artist_guess', { guess: val, letters: letters.join(','), date: gameDate }).then(r=>{
+          guessed.add(val);
+          const ok = r?.success && r?.data?.valid === true;
+          const reason = r?.data?.reason || '';
+          const row = document.createElement('div');
+          row.textContent = ok ? `${val} – ✅ Valid` : `${val} – ❌ Invalid${reason ? ' ('+reason+')' : ''}`;
+          row.style.color = ok ? 'var(--cmg-ok)' : 'var(--cmg-bad)';
+          results.appendChild(row);
+          if (ok){ score++; scoreEl.textContent = `Score: ${score}`; }
+          input.value=''; input.focus();
+        });
+      }
+      function stop(){
+        post('cmg_submit_artistletters_score',{score}).then(res=>{
+          const id='cmg-artistletters-chart';
+          el.innerHTML = resultShell(`
+            <p>🎯 Final Score: ${score} artist${score!==1?'s':''} found!</p>
+            <canvas id="${id}" class="cmg-chart" width="400" height="350"></canvas>
+            <div class="cmg-row">${COPY.comeBackLetters}</div>
+            <div class="cmg-row">${playMoreHTML()}</div>
+          `);
+          const c=res?.data?.chart, total=res?.data?.total, user=res?.data?.user_score;
+          if (c && total!=null && user!=null) renderBarChart(id, c, total, user, '#2ecc71');
+          share(el, `🎯 I found ${score} artist${score!==1?'s':''} in the Letters game!`);
+        });
+      }
+      el.querySelector('#submit-guess').onclick = submit;
+      el.querySelector('#stop-game').onclick = stop;
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
+      input.focus();
+    }
+  }
+*/
+// 10-round Letters Game (same function name, same endpoints)
+function initFindArtistsLettersGame() {
+  const el = document.getElementById('cmg-artist-letters-container');
+  if (!el) return;
+
+  createRoundGame({
+    container: el,
+    loadAction: 'cmg_get_artistletters_letters',
+    submitAction: 'cmg_submit_artistletters_score',
+
+    onRenderQuestion: ({ data, round, answer }) => {
+      // Require an answer and at least 5 letters
+      if (!data || !data.answer || !Array.isArray(data.letters) || data.letters.length < 5) {
+        el.innerHTML = resultShell('Letters data missing. Reload the page.');
+        return;
+      }
+
+      const letters = data.letters.map(String);     // includes ' ' for space
+      const target  = String(data.answer);          // normalized with spaces preserved
+      let guess = [];
+      const used = [];
+      let hintCount = 0; // 0 -> none used, 1 -> first letter, 2 -> first+second
+
+      el.innerHTML = `
+        <div class="cmg-root cmg-center">
+          ${qBadge((data.index ?? round) + 1)}
+
+          <div id="letters" class="cmg-row"
+               style="margin-top:6px;display:grid;grid-template-columns:repeat(5,minmax(44px,auto));gap:10px;justify-content:center">
+            ${letters.map((ch,i)=>{
+              const isSpace = ch === ' ';
+              const label = isSpace ? '␣' : safe(ch);
+              const payload = isSpace ? '__SPACE__' : safe(ch);
+              return `<button class="cmg-btn l" data-i="${i}" data-c="${payload}" style="min-width:44px">${label}</button>`;
+            }).join('')}
+          </div>
+
+          <div class="cmg-row" style="margin-top:8px">
+            <div id="guess" class="cmg-badgelike" style="min-width:220px;text-align:center"></div>
+          </div>
+
+          <div class="cmg-row" style="margin-top:8px">
+            <button class="cmg-btn" id="back">Delete</button>
+            <button class="cmg-btn" id="clear">Clear</button>
+            <button class="cmg-btn" id="validate">Validate</button>
+          </div>
+
+          <div class="cmg-row" style="margin-top:8px">
+            <button class="cmg-btn" id="hint">Hint (2)</button>
+          </div>
+
+          <div id="fb" class="cmg-feedback cmg-center" style="margin-top:8px"></div>
+        </div>
+      `;
+
+      // ---------- helpers ----------
+      const guessEl = el.querySelector('#guess');
+      const fb = el.querySelector('#fb');
+      const btnHint = el.querySelector('#hint');
+
+      function updateGuess(){ guessEl.textContent = guess.join(''); }
+      function disableAll(){ el.querySelectorAll('button').forEach(b=>b.disabled=true); }
+      function reenableAllTiles(){
+        el.querySelectorAll('.l').forEach(b=>{ b.disabled = false; });
+        used.length = 0;
+      }
+      function pickChar(ch){
+        const want = (ch === ' ') ? '__SPACE__' : ch;
+        const btn = Array.from(el.querySelectorAll('.l')).find(b => !b.disabled && b.dataset.c === want);
+        if (!btn) return false;
+        btn.disabled = true;
+        used.push(btn);
+        guess.push(ch);
+        updateGuess();
+        return true;
+      }
+      // Force first N chars of target into guess (resetting tiles)
+      function setPrefix(n){
+        reenableAllTiles();
+        guess = [];
+        for (let i=0;i<n;i++){
+          if (!pickChar(target[i])) return false;
+        }
+        return true;
+      }
+      function updateHintLabel(){
+        const left = Math.max(0, 2 - hintCount);
+        btnHint.textContent = left ? `Hint (${left})` : 'Hint (0)';
+        if (!left) btnHint.disabled = true;
+      }
+
+      // ---------- events ----------
+      el.querySelectorAll('.l').forEach(btn=>{
+        btn.onclick = () => {
+          if (btn.disabled) return;
+          btn.disabled = true;
+          used.push(btn);
+          const val = (btn.dataset.c === '__SPACE__') ? ' ' : btn.dataset.c;
+          guess.push(val);
+          updateGuess();
+        };
+      });
+
+      el.querySelector('#back').onclick = () => {
+        const b = used.pop();
+        if (b){ b.disabled = false; guess.pop(); updateGuess(); }
+      };
+
+      el.querySelector('#clear').onclick = () => {
+        reenableAllTiles();
+        guess = [];
+        updateGuess();
+      };
+
+      el.querySelector('#validate').onclick = () => {
+        const ok = (guess.join('') === target);
+        disableAll();
+        fb.className = 'cmg-feedback ' + (ok ? 'cmg-correct' : 'cmg-wrong');
+        fb.textContent = ok ? `✅ ${target}` : `❌ Correct: ${target}`;
+        answer(ok);
+      };
+
+      btnHint.onclick = () => {
+        if (hintCount >= 2) return;
+        hintCount++;
+        setPrefix(hintCount); // ensure first, then first+second
+        updateHintLabel();
+      };
+      updateHintLabel();
+      updateGuess();
+    },
+
+    onRenderFinish: ({ score, chart, total, userScore }) => {
+      const id = 'cmg-artistletters-chart';
+      el.innerHTML = resultShell(`
+        <p>You scored ${score} out of 10!</p>
+        <canvas id="${id}" class="cmg-chart"></canvas>
+        <div class="cmg-row">${playMoreHTML()}</div>
+      `);
+      if (chart && total != null && userScore != null) {
+        renderBarChart(id, chart, total, userScore);
+      }
+      share(el, `I scored ${score}/10 in the Letters game!`);
+    }
+  });
+}
+
+    // Who Has More Lead Streams? (A/B)
+    function initMoreLeadStreamsGame() {
+      const el = document.getElementById('cmg-moreleadstreams-container');
+      if (!el) return;
+      createRoundGame({
+        container: el,
+        loadAction: 'cmg_get_moreleadstreams_question',
+        submitAction: 'cmg_submit_moreleadstreams_score',
+        onRenderQuestion: ({data, answer}) => {
+          el.innerHTML = `
+            <div class="cmg-root cmg-center">
+              <div class="cmg-row">
+                ${['a','b'].map(k=>`
+                  <div class="cmg-card" data-choice="${k.toUpperCase()}">
+                    <img class="cmg-card__img" src="${safe(data[k].image)}" alt="${safe(data[k].name)}">
+                    <p class="cmg-card__title">${safe(data[k].name)}</p>
+                  </div>`).join('')}
+              </div>
+              <div id="fb" class="cmg-feedback cmg-center"></div>
+            </div>`;
+          el.querySelectorAll('.cmg-card').forEach(card=>{
+            card.onclick=()=>{
+              const guess = card.dataset.choice;
+              const wasRight = guess === data.correct;
+              const aName=data.a.name, bName=data.b.name;
+              const aCount=fmtStreams(parseInt(data.s1,10)), bCount=fmtStreams(parseInt(data.s2,10));
+              el.querySelectorAll('.cmg-card').forEach(c=>c.classList.add('is-disabled'));
+              card.classList.add(wasRight?'correct':'wrong');
+              const fb = el.querySelector('#fb');
+              fb.className = 'cmg-feedback ' + (wasRight?'cmg-correct':'cmg-wrong');
+              fb.innerHTML = `${wasRight?'✅':'❌'} ${safe(aName)}: ${aCount} lead streams<br>${safe(bName)}: ${bCount} lead streams`;
+              answer(wasRight);
+            };
+          });
+        },
+        onRenderFinish: ({score, chart, total, userScore}) => {
+          const id='cmg-leadstreams-chart';
+          el.innerHTML = resultShell(`
+            <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+            <canvas id="${id}" class="cmg-chart""></canvas>
+            <div class="cmg-row">${COPY.comeBackArtists}</div>
+            <div class="cmg-row">${playMoreHTML()}</div>
+          `);
+          if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#3a86ff');
+          share(el, `🎯 I scored ${score}/10 in Who Has More Lead Streams?`);
+        }
+      });
+    }
+    
+    // Artist Sales Range (CSPC) — <20m ; 20-50m ; 50-100m ; 100m+
+    function initArtistSalesGame() {
+      const el = document.getElementById('cmg-artistsales-container');
+      if (!el) return;
+    
+      const options = ['<20m','20-50m','50-100m','100m+'];
+      const isPast = el.dataset.past === '1';
+      const gameDate = el.dataset.date || null;
+    
+      createRoundGame({
+        container: el,
+        loadAction: 'cmg_get_artistsales_question',
+        submitAction: isPast ? null : 'cmg_submit_artistsales_score',
+        getLoadBody: () => (gameDate ? { date: gameDate } : {}),
+    
+        onRenderQuestion: ({ data: d, round, answer }) => {
+          el.innerHTML = `
+            <div class="cmg-root cmg-center">
+              ${qBadge((d.index ?? round) + 1)}
+              ${d.image_url ? `<img class="cmg-img" src="${safe(d.image_url)}" alt="${safe(d.artist)}">` : ''}
+              <p class="cmg-title"><strong>${safe(d.artist)}</strong></p>
+              <div class="cmg-row">
+                ${options.map(o=>`<button class="cmg-btn range" data-v="${o}">${o}</button>`).join('')}
+              </div>
+              <div id="fb" class="cmg-feedback cmg-center"></div>
+            </div>`;
+    
+          el.querySelectorAll('.range').forEach(btn=>{
+            btn.onclick=()=>{
+              const right = (d.bucket === btn.dataset.v);
+              const fb = el.querySelector('#fb');
+              fb.className = 'cmg-feedback ' + (right ? 'cmg-correct' : 'cmg-wrong');
+              fb.innerHTML = right
+                ? `✅ ${safe(d.artist)} totals ${fmtCspc(d.cspc)} CSPC.`
+                : `❌ Correct bucket is ${safe(d.bucket)} (${fmtCspc(d.cspc)}).`;
+              el.querySelectorAll('.range').forEach(b=>b.disabled=true);
+              answer(right);
+            };
+          });
+        },
+    
+        onRenderFinish: ({ score, chart, total, userScore }) => {
+          if (isPast) {
+            el.innerHTML = resultShell(`
+              <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+              <div class="cmg-row">${playMoreHTML()}</div>
+            `);
+            return;
+          }
+          const id='cmg-artistsales-chart';
+          el.innerHTML = resultShell(`
+            <p>🎯 ${COPY.scorePrefix} ${score} ${COPY.outOfTen}</p>
+            <canvas id="${id}" class="cmg-chart"></canvas>
+            <div class="cmg-row">${COPY.comeBackArtists}</div>
+            <div class="cmg-row">${playMoreHTML()}</div>
+          `);
+          if (chart && total!=null && userScore!=null) renderBarChart(id, chart, total, userScore, '#3a86ff');
+          share(el, `🎯 I scored ${score}/10 in Artist Sales Range!`);
+        }
+      });
+    }
+
+    
+    // ================== Bootstrapping (gated start) ==================
+    window.addEventListener('load', () => {
+      if (document.getElementById('cmg-game-container'))
+        gateGame('cmg-game-container', initGuessAlbumGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Find-album-title.jpg'
+        });
+    
+      if (document.getElementById('cmg-overunder-container'))
+        gateGame('cmg-overunder-container', initOverUnderGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Song-streams.jpg'
+        });
+    
+      if (document.getElementById('cmg-albumstreams-container'))
+        gateGame('cmg-albumstreams-container', initAlbumStreamsGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Album-streams.jpg'
+        });
+    
+      if (document.getElementById('cmg-artist-letters-container'))
+        gateGame('cmg-artist-letters-container', initFindArtistsLettersGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Find-artist-names.jpg'
+        });
+    
+      if (document.getElementById('cmg-morelisteners-container'))
+        gateGame('cmg-morelisteners-container', initMoreListenersGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Most-monthly-listeners.jpg'
+        });
+    
+      if (document.getElementById('cmg-cspc-overunder-container'))
+        gateGame('cmg-cspc-overunder-container', initCspcOverUnderGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Album-10M.jpg'
+        });
+    
+      if (document.getElementById('cmg-morefollows-container'))
+        gateGame('cmg-morefollows-container', initMoreFollowersGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Most-followers.jpg'
+        });
+    
+      if (document.getElementById('cmg-biggesthit-container'))
+        gateGame('cmg-biggesthit-container', initBiggestHitGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Biggest-hit-from-album.jpg'
+        });
+    
+      if (document.getElementById('cmg-firstsecond-container'))
+        gateGame('cmg-firstsecond-container', initFirstSecondHitGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Biggest-hit-or-runner-up.jpg'
+        });
+    
+      if (document.getElementById('cmg-fakealbum-container'))
+        gateGame('cmg-fakealbum-container', initFindFakeAlbumGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Spot-the-odd-one-out.jpg'
+        });
+    
+      if (document.getElementById('cmg-moreleadstreams-container'))
+        gateGame('cmg-moreleadstreams-container', initMoreLeadStreamsGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Artist-streams.jpg'
+        });
+    
+      if (document.getElementById('cmg-artistsales-container'))
+        gateGame('cmg-artistsales-container', initArtistSalesGame, {
+          image: '/wp-content/uploads/2025/08/Logo-Artist-sales.jpg'
+        });
+    });
+
+
+})();

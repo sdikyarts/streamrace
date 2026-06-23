@@ -1,0 +1,13 @@
+.wpfcp-article-info{background:#E6E6E6; padding:2px 10px 2px 10px!important; display:inline-block; margin: 5px 0px 5px 0px!important; border-right-width:0px; float:right;}
+.wpfcp-article-info a{text-decoration:none; font-size:12px; line-height:16px; padding:0px; font-weight:normall; box-shadow:none!important;}
+.wpfcp-comment-info{background: #e6e6e6; display: inline-block; float: right; padding: 2px 10px 2px 10px; margin:2px 0px;}
+.wpfcp-comment-info a{text-decoration:none; font-size:12px; line-height:16px; padding:0px; font-weight:normall; box-shadow:none!important;}
+#wpforo #wpforo-wrap .wpfcp-topic-info{background:#E6E6E6; font-size:12px!important; padding:4px 10px 4px 10px!important; display:inline-block; margin: 5px -3px 0 5px!important; border-right-width:0px; float:right;}
+#wpforo #wpforo-wrap .wpfcp-post-info{background:#E6E6E6; font-size:12px!important; padding:4px 10px 4px 10px!important; display:inline-block; margin: 5px -3px 0 5px!important; border-right-width:0px; float:right;}
+#wpforo #wpforo-wrap .wpfl-2 .wpfcp-topic-info { margin: 5px -22px 10px 5px!important; }
+#wpforo #wpforo-wrap .wpfl-2 .wpfcp-post-info { margin: 5px -22px 10px 5px!important; }
+#wpforo #wpforo-wrap .wpfl-3 .wpforo-comment-content .wpfcp-post-info { margin: 5px -22px 10px 5px!important; font-size: 11px; padding: 2px 10px!important;}
+#wpforo #wpforo-wrap .wpfl-3 .wpforo-post-content .wpfcp-post-info { margin: 5px -32px 10px 5px!important; }
+#wpforo #wpforo-wrap .wpfl-3 .wpforo-post-content .wpfcp-topic-info { margin: 5px -32px 10px 5px!important; }
+.wpfcpcb{clear:both;}
+.wpfcpcr{clear:right;}

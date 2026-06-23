@@ -1,0 +1,61 @@
+name: Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+      script:
+        description: 'Script to run'
+        required: true
+        type: choice
+        options:
+          - scrape:chartmasters
+          - import:chartmasters:file
+          - enrich:spotify
+          - enrich:musicbrainz
+      source_date:
+        description: 'Source date (YYYY-MM-DD) — import:chartmasters:file only, defaults to today'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ inputs.script }} → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run ${{ inputs.script }}
+        env:
+          APP_ENV: ${{ inputs.environment }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SOURCE_DATE: ${{ inputs.source_date }}
+        run: |
+          if [ "${{ inputs.script }}" = "import:chartmasters:file" ] && [ -n "$SOURCE_DATE" ]; then
+            npm run import:chartmasters:file -- "$SOURCE_DATE"
+          else
+            npm run ${{ inputs.script }}
+          fi
