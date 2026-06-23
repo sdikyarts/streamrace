@@ -23,11 +23,13 @@ type DataTablesApi = {
   };
 };
 
+type JQuery = (el: Element) => { DataTable(): DataTablesApi };
+
 type DataTablesWindow = Window & {
-  $?: {
+  $?: JQuery & {
     fn?: {
       dataTable?: {
-        tables(options: { api: true }): DataTablesApi;
+        isDataTable(el: Element): boolean;
       };
     };
   };
@@ -72,13 +74,33 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
       { timeout: 30000 },
     );
 
-    // Try DataTables JS API first — gives us hidden columns (gender, language, genre, country)
+    // Try DataTables JS API first — gives us hidden columns (gender, language, genre, country).
+    // The page has multiple tables; find the one under the "All Credits" heading to avoid
+    // mixing in data from the other rankings (Top 1000, Apple, etc.).
     const dtRows = await page.evaluate((): unknown[][] | null => {
       try {
-        const dataTable = (window as DataTablesWindow).$?.fn?.dataTable;
-        const tables = dataTable?.tables({ api: true });
-        if (!tables || tables.rows().count() === 0) return null;
-        return tables
+        const $ = (window as DataTablesWindow).$;
+        if (!$?.fn?.dataTable) return null;
+
+        // Walk headings to find the "All Credits" section, then pick its table.
+        const headings = Array.from(document.querySelectorAll("h2, h3, h4"));
+        const allCreditsHeading = headings.find((h) =>
+          h.textContent?.toLowerCase().includes("all credits"),
+        );
+
+        let tableEl: Element | null = null;
+        if (allCreditsHeading) {
+          let el = allCreditsHeading.nextElementSibling;
+          while (el && el.tagName !== "TABLE") el = el.nextElementSibling;
+          if (el?.tagName === "TABLE" && $.fn.dataTable.isDataTable(el)) tableEl = el;
+        }
+
+        if (!tableEl) return null;
+
+        const api = $(tableEl).DataTable();
+        if (api.rows().count() === 0) return null;
+
+        return api
           .rows()
           .data()
           .toArray()
@@ -99,20 +121,47 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
       return parseDtRows(dtRows);
     }
 
-    // Fallback: select "All" entries then scrape DOM
+    // Fallback: find the All Credits table, select "All" entries, then scrape its DOM.
     console.log("Falling back to DOM scraping...");
-    const lengthSelect = await page.$("select[name$='_length']");
+    const allCreditsTable = await page.evaluateHandle((): Element | null => {
+      const headings = Array.from(document.querySelectorAll("h2, h3, h4"));
+      const heading = headings.find((h) =>
+        h.textContent?.toLowerCase().includes("all credits"),
+      );
+      if (!heading) return null;
+      let el = heading.nextElementSibling;
+      while (el && el.tagName !== "TABLE") el = el.nextElementSibling;
+      return el?.tagName === "TABLE" ? el : null;
+    });
+
+    const tableId = await page.evaluate(
+      (el) => (el as Element | null)?.id ?? null,
+      allCreditsTable,
+    );
+    const lengthSelectSelector = tableId
+      ? `select[name='${tableId}_length']`
+      : "select[name$='_length']";
+
+    const lengthSelect = await page.$(lengthSelectSelector);
     if (lengthSelect) {
       await lengthSelect.select("-1");
       await page.waitForFunction(
-        () => (document.querySelectorAll("table tbody tr").length ?? 0) > 100,
+        (sel) =>
+          (
+            document
+              .querySelector(sel)
+              ?.closest("div")
+              ?.querySelectorAll("table tbody tr").length ?? 0
+          ) > 100,
         { timeout: 30000 },
+        lengthSelectSelector,
       );
     }
 
-    const domRows = await page.evaluate((): unknown[][] => {
+    const domRows = await page.evaluate((tableEl): unknown[][] => {
+      const table = tableEl as Element | null;
       const rows: unknown[][] = [];
-      document.querySelectorAll("table tbody tr").forEach((tr) => {
+      (table ?? document).querySelectorAll("table tbody tr").forEach((tr) => {
         const cells = tr.querySelectorAll("td");
         if (cells.length < 6) return;
         const anchor = cells[2]?.querySelector("a");
@@ -126,7 +175,7 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
         ]);
       });
       return rows;
-    });
+    }, allCreditsTable);
 
     return parseDtRows(domRows);
   } finally {
