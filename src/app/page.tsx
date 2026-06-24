@@ -1,65 +1,96 @@
-import Image from "next/image";
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
 
 export default function Home() {
+  const [expanded, setExpanded] = useState(false)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]">
+      {/* Background: placeholder for artist Spotify photo slideshow */}
+      <div className="absolute inset-0" />
+
+      {/* Gradient overlay: dark left → transparent right */}
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to right, #0e0e0e 40%, rgba(14,14,14,0.9) 55%, rgba(14,14,14,0.3) 70%, transparent 85%)',
+        }}
+      />
+
+      {/* Content */}
+      <div
+        className="absolute z-[2] font-inter font-bold italic"
+        style={{
+          top: '13.24vh',
+          left: '8.7vw',
+          width: '22.8vw',
+        }}
+      >
+        {/* Logo SVG — drop streamrace-logo.svg into /public */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/streamrace-logo.svg"
+          alt="StreamRace"
+          className="w-full h-auto block"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Tagline */}
+        <p
+          className="text-[#FFFBF7] leading-snug mt-0"
+          style={{ fontSize: '1.87vw' }}
+        >
+          Not monthly listeners.
+          <br />
+          The all-time stream race.
+        </p>
+
+        {/* Button stack */}
+        <div
+          className="flex flex-col"
+          style={{ marginTop: '2.5vh', gap: '1.67vh' }}
+        >
+          {/* START THE RACE */}
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer"
+            style={{
+              background:
+                'linear-gradient(to right, #800C81 0%, #E71616 50.49%, #BEA500 100%)',
+              fontSize: '1.87vw',
+              padding: '0.88vh 0.88vw',
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <span>START THE RACE</span>
+            <span>{expanded ? '▼' : '▶'}</span>
+          </button>
+
+          {/* Mode buttons — visible when expanded */}
+          {expanded && (
+            <>
+              <Link
+                href="/all-credits"
+                className="flex items-center justify-between w-full text-[#FFFBF7] bg-[#E71616]"
+                style={{ fontSize: '1.87vw', padding: '0.88vh 0.88vw' }}
+              >
+                <span>All-Credits Mode</span>
+                <span>((·))</span>
+              </Link>
+
+              <Link
+                href="/lead-streams"
+                className="flex items-center justify-between w-full text-[#FFFBF7] bg-[#800C81]"
+                style={{ fontSize: '1.87vw', padding: '0.88vh 0.88vw' }}
+              >
+                <span>Lead Streams Mode</span>
+                <span>✓</span>
+              </Link>
+            </>
+          )}
         </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }
