@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+import ArtistSlideshow from './ArtistSlideshow'
+
 export default function LandingPage() {
   const [expanded, setExpanded] = useState(false)
   const [btnHovered, setBtnHovered] = useState(false)
@@ -11,17 +13,8 @@ export default function LandingPage() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]">
-      {/* Background: placeholder for artist Spotify photo slideshow */}
-      <div className="absolute inset-0" />
+      <ArtistSlideshow />
 
-      {/* Gradient overlay: dark left → transparent right */}
-      <div
-        className="absolute inset-0 z-[1] pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(to right, #0e0e0e 40%, rgba(14,14,14,0.9) 55%, rgba(14,14,14,0.3) 70%, transparent 85%)',
-        }}
-      />
 
       <style>{`
         @keyframes flyInUp {
