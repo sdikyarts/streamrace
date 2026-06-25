@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const SLIDE_DURATION = 7000
 const FADE_DURATION = 1800
+// Small gap above the top of the head before the pan starts (% of image height)
+const HEAD_MARGIN = 3
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -14,22 +16,269 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function preloadUrl(url: string): Promise<void> {
+// x/y = focal center as % of natural image dimensions
+// topY = top of head/subject as % of image height (pan starts just above here)
+interface FacePos { x: number; y: number; topY: number }
+const DEFAULT_POS: FacePos = { x: 50, y: 38, topY: 15 }
+
+// Convert a focal point (% of image) to CSS background-position (%) so that
+// the focal point is centered in the element.
+//
+// CSS: offset_y = bg_pos_y/100 * (element_h - scaled_h)
+// We want face_pixel_y = -offset_y + element_h/2
+//   => bg_pos_y = (face_pixel_y - element_h/2) / (scaled_h - element_h) * 100
+function focalToBgPos(focal: { x: number; y: number }, el: HTMLDivElement): { x: number; y: number } {
+  const elW = el.offsetWidth
+  const elH = el.offsetHeight
+  // background-size: cover with square Spotify images → rendered size = max dimension
+  const imgW = Math.max(elW, elH)
+  const imgH = imgW
+
+  const facePxX = (focal.x / 100) * imgW
+  const facePxY = (focal.y / 100) * imgH
+
+  const overflowX = imgW - elW
+  const overflowY = imgH - elH
+
+  const bgX = overflowX <= 0 ? 50 : Math.max(0, Math.min(100, (facePxX - elW / 2) / overflowX * 100))
+  const bgY = overflowY <= 0 ? 50 : Math.max(0, Math.min(100, (facePxY - elH / 2) / overflowY * 100))
+
+  return { x: bgX, y: bgY }
+}
+
+// Native face detection -------------------------------------------------------
+
+type NativeDetectedFace = {
+  boundingBox: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+}
+
+type NativeFaceDetector = {
+  detect: (source: CanvasImageSource) => Promise<NativeDetectedFace[]>
+}
+
+declare global {
+  interface Window {
+    FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector
+  }
+}
+
+function scaleToCanvas(img: HTMLImageElement, scale: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(img.naturalWidth * scale)
+  canvas.height = Math.round(img.naturalHeight * scale)
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas
+}
+
+async function detectNativeFace(img: HTMLImageElement): Promise<FacePos | null> {
+  if (!window.FaceDetector) return null
+
+  try {
+    const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 })
+    const faces = await detector.detect(img)
+    if (!faces.length) return null
+
+    let sumX = 0, sumY = 0, topMostY = Infinity
+    for (const { boundingBox } of faces) {
+      const x1 = boundingBox.x
+      const y1 = boundingBox.y
+      const x2 = boundingBox.x + boundingBox.width
+      const y2 = boundingBox.y + boundingBox.height
+      sumX += (x1 + x2) / 2
+      sumY += (y1 + y2) / 2
+      if (y1 < topMostY) topMostY = y1
+    }
+
+    return {
+      x: Math.round((sumX / faces.length / img.naturalWidth) * 100),
+      y: Math.round((sumY / faces.length / img.naturalHeight) * 100),
+      topY: Math.max(0, Math.round((topMostY / img.naturalHeight) * 100)),
+    }
+  } catch {
+    return null
+  }
+}
+
+// ── Visual saliency (profiles, logos, objects, text) ─────────────────────────
+// Weighted centroid of high-contrast + high-saturation regions, biased toward
+// the upper-center of the frame where the subject's head almost always appears
+// in portrait / artist-photo compositions.
+function computeSaliencyPos(canvas: HTMLCanvasElement): FacePos {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return DEFAULT_POS
+
+  const { width, height } = canvas
+  const { data } = ctx.getImageData(0, 0, width, height)
+
+  const step = Math.max(2, Math.floor(Math.min(width, height) / 64))
+  let totalW = 0, wX = 0, wY = 0
+
+  for (let y = step; y < height - step; y += step) {
+    for (let x = step; x < width - step; x += step) {
+      const i = (y * width + x) * 4
+      const r = data[i], g = data[i + 1], b = data[i + 2]
+
+      const gray = r * 0.299 + g * 0.587 + b * 0.114
+      const max = Math.max(r, g, b), min = Math.min(r, g, b)
+      const sat = max === 0 ? 0 : (max - min) / max
+
+      const ri = (y * width + Math.min(x + step, width - 1)) * 4
+      const bi = (Math.min(y + step, height - 1) * width + x) * 4
+      const grayR = data[ri] * 0.299 + data[ri + 1] * 0.587 + data[ri + 2] * 0.114
+      const grayB = data[bi] * 0.299 + data[bi + 1] * 0.587 + data[bi + 2] * 0.114
+      const grad = Math.abs(gray - grayR) + Math.abs(gray - grayB)
+
+      // Mild horizontal center bias only. A Y bias causes wrong results when
+      // the subject is in the lower portion of the frame, pulling the centroid
+      // upward and making the pan start far from the actual subject.
+      const dx = Math.abs(x / width - 0.5)
+      const bias = 1.15 - dx * 0.3  // 1.15× at centre-x, 1.0× at edges
+
+      const w = (grad + sat * 128) * bias
+      totalW += w; wX += x * w; wY += y * w
+    }
+  }
+
+  if (totalW === 0) return DEFAULT_POS
+
+  const cx = Math.round((wX / totalW / width) * 100)
+  const cy = Math.round((wY / totalW / height) * 100)
+  // Estimate head top: portraits usually have ~15-20% of head height above center
+  const topY = Math.max(0, cy - 18)
+  return { x: cx, y: cy, topY }
+}
+
+// ── Name width animation (module-level to avoid deep function nesting) ───────
+
+let pendingNameSwap: { text: HTMLSpanElement; name: string } | null = null
+let widthFallbackTimer: ReturnType<typeof setTimeout> | null = null
+
+function doNameSwap(wrap: HTMLDivElement) {
+  wrap.removeEventListener('transitionend', clearWidthTransition)
+  wrap.style.transition = ''
+  wrap.style.overflow = ''
+  if (pendingNameSwap) {
+    const { text, name } = pendingNameSwap
+    pendingNameSwap = null
+    text.textContent = name
+    text.style.transition = 'opacity 0.15s ease'
+    text.style.opacity = '1'
+  }
+  wrap.style.width = ''
+}
+
+function clearWidthTransition(e: Event) {
+  if ((e as TransitionEvent).propertyName !== 'width') return
+  if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
+  doNameSwap(e.currentTarget as HTMLDivElement)
+}
+
+function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: string) {
+  if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
+
+  const prevWidth = wrap.offsetWidth
+  const prevName = text.textContent ?? ''
+
+  // Temporarily inject new name with nowrap to measure target width, then restore
+  text.style.whiteSpace = 'nowrap'
+  text.textContent = name
+  wrap.style.transition = 'none'
+  wrap.style.width = 'max-content'
+  wrap.getBoundingClientRect()
+  const nextWidth = wrap.getBoundingClientRect().width + 8
+  text.textContent = prevName
+  text.style.whiteSpace = ''
+  wrap.style.width = `${prevWidth}px`
+  wrap.getBoundingClientRect()
+
+  // Clip during the morph so the old (invisible) text can't visually bleed out
+  wrap.style.overflow = 'hidden'
+  // Fade text out (old name), morph container, then swap text and fade in
+  text.style.transition = 'opacity 0.15s ease'
+  text.style.opacity = '0'
+  pendingNameSwap = { text, name }
+  // Include transform so hover zoom stays smooth during a slide transition
+  wrap.style.transition = 'width 0.35s ease, transform 0.2s ease'
+  wrap.style.width = `${nextWidth}px`
+  wrap.removeEventListener('transitionend', clearWidthTransition)
+  wrap.addEventListener('transitionend', clearWidthTransition)
+  // Fallback: if transitionend doesn't fire (same-width names), swap after delay
+  widthFallbackTimer = setTimeout(() => {
+    widthFallbackTimer = null
+    doNameSwap(wrap)
+  }, 450)
+}
+
+// ── Detection entry point ────────────────────────────────────────────────────
+function preloadAndDetect(url: string): Promise<FacePos> {
   return new Promise(resolve => {
     const img = new Image()
-    img.onload = () => resolve()
-    img.onerror = () => resolve()
+    img.crossOrigin = 'anonymous'
+    img.onload = async () => {
+      try {
+        const nativeFace = await detectNativeFace(img)
+        if (nativeFace) return resolve(nativeFace)
+
+        // Fall back to a small saliency scan when native face detection is unavailable.
+        resolve(computeSaliencyPos(scaleToCanvas(img, 0.25)))
+      } catch {
+        resolve(DEFAULT_POS)
+      }
+    }
+    img.onerror = () => resolve(DEFAULT_POS)
     img.src = url
   })
 }
 
-export default function ArtistSlideshow() {
+// ── Artist list cache (localStorage, 1-hour TTL) ─────────────────────────────
+
+const CACHE_KEY = 'sr:artists'
+const CACHE_TTL = 3_600_000
+
+function loadCachedArtists(): { url: string; name: string }[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { ts, data } = JSON.parse(raw) as { ts: number; data: { url: string; name: string }[] }
+    return Date.now() - ts < CACHE_TTL ? data : null
+  } catch { return null }
+}
+
+function saveCachedArtists(data: { url: string; name: string }[]) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })) } catch { /* quota or SSR */ }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function ArtistSlideshow({ initialArtists }: { initialArtists?: { url: string; name: string }[] }) {
   const [ready, setReady] = useState(false)
 
   const deckRef = useRef<string[]>([])
   const posRef = useRef(0)
   const activeRef = useRef<0 | 1>(0)
-  const layerRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)] as const
+  const layerUrls = useRef<[string, string]>(['', ''])
+  const faceCache = useRef<Map<string, FacePos>>(new Map())
+  const urlToName = useRef<Map<string, string>>(new Map())
+  const nameWrapRef = useRef<HTMLDivElement>(null)
+  const nameTextRef = useRef<HTMLSpanElement>(null)
+
+  const wrapper0Ref = useRef<HTMLDivElement>(null)
+  const wrapper1Ref = useRef<HTMLDivElement>(null)
+  const bg0Ref = useRef<HTMLDivElement>(null)
+  const bg1Ref = useRef<HTMLDivElement>(null)
+
+  function getWrapperEl(slot: 0 | 1) {
+    return (slot === 0 ? wrapper0Ref : wrapper1Ref).current!
+  }
+
+  function getBgEl(slot: 0 | 1) {
+    return (slot === 0 ? bg0Ref : bg1Ref).current!
+  }
 
   const getNext = useCallback((): string => {
     if (posRef.current >= deckRef.current.length) {
@@ -39,45 +288,114 @@ export default function ArtistSlideshow() {
     return deckRef.current[posRef.current++]
   }, [])
 
-  // Peek at next N URLs without advancing posRef
   const peekAhead = useCallback((count: number): string[] => {
     const deck = deckRef.current
     const pos = posRef.current
     return Array.from({ length: count }, (_, i) => deck[(pos + i) % deck.length])
   }, [])
 
-  function restartPan(el: HTMLDivElement) {
-    el.style.animation = 'none'
+  const cacheDetect = useCallback(async (url: string): Promise<FacePos> => {
+    if (faceCache.current.has(url)) return faceCache.current.get(url)!
+    const pos = await preloadAndDetect(url)
+    faceCache.current.set(url, pos)
+    return pos
+  }, [])
+
+  function startPan(slot: 0 | 1, url: string) {
+    const el = getBgEl(slot)
+    const focal = faceCache.current.get(url) ?? DEFAULT_POS
+
+    // Pan starts just above the top of the head, ends at face/subject center
+    const aboveHead = Math.max(0, focal.topY - HEAD_MARGIN)
+    const { x: startX, y: startY } = focalToBgPos({ x: focal.x, y: aboveHead }, el)
+    const { x: endX, y: endY } = focalToBgPos(focal, el)
+
+    el.style.transition = 'none'
+    el.style.backgroundPosition = `${startX}% ${startY}%`
     el.getBoundingClientRect()
-    el.style.animation = `slideshowPan ${SLIDE_DURATION + FADE_DURATION}ms linear forwards`
+    el.style.transition = `background-position ${SLIDE_DURATION + FADE_DURATION}ms linear`
+    el.style.backgroundPosition = `${endX}% ${endY}%`
+  }
+
+  function showNameFirst(url: string) {
+    const wrap = nameWrapRef.current
+    const text = nameTextRef.current
+    if (!wrap || !text) return
+    text.textContent = urlToName.current.get(url) ?? ''
+    text.style.opacity = '1'
+    text.style.transition = ''
+    wrap.style.visibility = 'visible'
+    wrap.style.animation = 'none'
+    wrap.getBoundingClientRect()
+    wrap.style.animation = 'artistNameIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) backwards'
+    wrap.addEventListener('animationend', () => { wrap.style.animation = '' }, { once: true })
+  }
+
+  function transitionName(url: string) {
+    const wrap = nameWrapRef.current
+    const text = nameTextRef.current
+    if (!wrap || !text) return
+    animateNameWidth(wrap, text, urlToName.current.get(url) ?? '')
+  }
+
+  function fadeIn(slot: 0 | 1) {
+    const el = getWrapperEl(slot)
+    el.style.transition = `opacity ${FADE_DURATION}ms ease`
+    el.style.opacity = '1'
+  }
+
+  function fadeOut(slot: 0 | 1) {
+    const el = getWrapperEl(slot)
+    el.style.transition = `opacity ${FADE_DURATION}ms ease`
+    el.style.opacity = '0'
   }
 
   useEffect(() => {
+    let started = false
+    let cancelled = false
+
+    async function init(data: { url: string; name: string }[]) {
+      if (started || !data.length) return
+      started = true
+      urlToName.current = new Map(data.map(a => [a.url, a.name]))
+      deckRef.current = shuffle(data.map(a => a.url))
+      posRef.current = 0
+
+      const first = getNext()
+      const second = getNext()
+
+      const firstDetection = cacheDetect(first)
+      const secondDetection = second === first ? firstDetection : cacheDetect(second)
+      await Promise.all([firstDetection, secondDetection])
+      if (cancelled) return
+
+      getBgEl(0).style.backgroundImage = `url(${first})`
+      getBgEl(1).style.backgroundImage = `url(${second})`
+      layerUrls.current = [first, second]
+
+      startPan(0, first)
+      fadeIn(0)
+      showNameFirst(first)
+      setReady(true)
+
+      for (const url of peekAhead(2)) cacheDetect(url)
+    }
+
+    // SSR data → localStorage cache → network fetch (first-visit fallback)
+    const immediate = initialArtists?.length ? initialArtists : loadCachedArtists()
+    if (immediate) init(immediate)
+
     fetch('/api/artist-images')
       .then(r => r.json())
-      .then(async ({ images }: { images: string[] }) => {
-        if (!images.length) return
-        deckRef.current = shuffle(images)
-        posRef.current = 0
-
-        const first = getNext()
-        const second = getNext()
-
-        // Wait for the first image before showing, preload second in parallel
-        await Promise.all([preloadUrl(first), preloadUrl(second)])
-        // Kick off background preloads for the next few
-        peekAhead(3).forEach(preloadUrl)
-
-        const l0 = layerRefs[0].current!
-        const l1 = layerRefs[1].current!
-
-        l0.style.backgroundImage = `url(${first})`
-        l1.style.backgroundImage = `url(${second})`
-        l0.style.opacity = '1'
-        restartPan(l0)
-
-        setReady(true)
+      .then(({ artists }: { artists: { url: string; name: string }[] }) => {
+        saveCachedArtists(artists)
+        init(artists)  // no-op if already started
       })
+      .catch(() => {
+        // Keep the static hero usable even if the slideshow API is unavailable.
+      })
+
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -87,24 +405,20 @@ export default function ArtistSlideshow() {
     const timer = setInterval(() => {
       const outgoing = activeRef.current
       const incoming = (outgoing === 0 ? 1 : 0) as 0 | 1
+      const inUrl = layerUrls.current[incoming]
 
-      const outEl = layerRefs[outgoing].current!
-      const inEl = layerRefs[incoming].current!
-
-      restartPan(inEl)
-      inEl.style.transition = `opacity ${FADE_DURATION}ms ease`
-      inEl.style.opacity = '1'
-
-      outEl.style.transition = `opacity ${FADE_DURATION}ms ease`
-      outEl.style.opacity = '0'
-
+      startPan(incoming, inUrl)
+      fadeIn(incoming)
+      fadeOut(outgoing)
+      transitionName(inUrl)
       activeRef.current = incoming
 
       setTimeout(() => {
         const next = getNext()
-        outEl.style.backgroundImage = `url(${next})`
-        // Preload upcoming images without consuming deck positions
-        peekAhead(2).forEach(preloadUrl)
+        getBgEl(outgoing).style.backgroundImage = `url(${next})`
+        layerUrls.current[outgoing] = next
+        cacheDetect(next)
+        for (const url of peekAhead(2)) cacheDetect(url)
       }, FADE_DURATION)
     }, SLIDE_DURATION)
 
@@ -115,15 +429,38 @@ export default function ArtistSlideshow() {
   return (
     <>
       <style>{`
-        @keyframes slideshowPan {
-          from { background-position: 60% 38%; }
-          to   { background-position: 60% 62%; }
+        @keyframes artistNameIn {
+          from { opacity: 0; transform: translateY(-40px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .artist-label-text {
+          display: inline-block;
+          white-space: nowrap;
+          background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
+          background-size: 200% 100%;
+          background-position: 0% 0%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          transition: background-position 0.5s ease;
+        }
+        .artist-label-wrap {
+          visibility: hidden;
+          transform-origin: right top;
+          transition: transform 0.2s ease;
+        }
+        .artist-label-wrap:hover {
+          transform: scale(1.06);
+        }
+        .artist-label-wrap:hover .artist-label-text {
+          background-position: 100% 0%;
         }
       `}</style>
+
       <div
-        className="absolute top-0 right-0 bottom-0 w-[75%]"
-        style={{
-          maskImage: [
+        className="absolute top-0 right-0 bottom-0 w-[67%]"
+        style={(() => {
+          const mask = [
             'linear-gradient(to right,',
             '  transparent 0%,',
             '  rgba(0,0,0,0.03) 6%,',
@@ -133,23 +470,69 @@ export default function ArtistSlideshow() {
             '  rgba(0,0,0,0.60) 37%,',
             '  rgba(0,0,0,0.78) 44%,',
             '  rgba(0,0,0,0.92) 50%,',
-            '  black 55%',
+            '  black 55%,',
+            '  black 100%',
             ')',
-          ].join(' '),
-        }}
+          ].join(' ')
+          return { maskImage: mask, WebkitMaskImage: mask }
+        })()}
       >
-        {([0, 1] as const).map(i => (
+        <div
+          ref={wrapper0Ref}
+          className="absolute inset-0"
+          style={{ opacity: 0 }}
+        >
           <div
-            key={i}
-            ref={layerRefs[i]}
+            ref={bg0Ref}
             className="absolute inset-0"
             style={{
-              backgroundSize: '120%',
-              backgroundPosition: '60% 38%',
-              opacity: 0,
+              backgroundSize: 'cover',
+              backgroundPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
             }}
           />
-        ))}
+        </div>
+        <div
+          ref={wrapper1Ref}
+          className="absolute inset-0"
+          style={{ opacity: 0 }}
+        >
+          <div
+            ref={bg1Ref}
+            className="absolute inset-0"
+            style={{
+              backgroundSize: 'cover',
+              backgroundPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Artist name — outside the mask so it's never partially faded */}
+      <div
+        ref={nameWrapRef}
+        className="absolute z-[2] artist-label-wrap"
+        onMouseEnter={() => {
+          if (nameWrapRef.current) nameWrapRef.current.style.transform = 'scale(1.06)'
+          if (nameTextRef.current) nameTextRef.current.style.backgroundPosition = '100% 0%'
+        }}
+        onMouseLeave={() => {
+          if (nameWrapRef.current) nameWrapRef.current.style.transform = ''
+          if (nameTextRef.current) nameTextRef.current.style.backgroundPosition = ''
+        }}
+        style={{
+          top: 36,
+          right: 36,
+          backgroundColor: 'white',
+          padding: '0.55vh 0.9vw',
+          fontFamily: 'var(--font-helvetica)',
+          fontWeight: 700,
+          fontStyle: 'italic',
+          fontSize: 'clamp(13px, 1.3vw, 20px)',
+          userSelect: 'none',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+        }}
+      >
+        <span ref={nameTextRef} className="artist-label-text" />
       </div>
     </>
   )
