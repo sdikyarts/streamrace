@@ -6,9 +6,13 @@ vi.mock("next/font/google", () => ({
   Geist_Mono: () => ({ variable: "geist-mono" }),
 }));
 
-vi.mock("next/font/local", () => ({
-  default: () => ({ variable: "helvetica" }),
-}));
+vi.mock("next/font/local", () => {
+  let count = 0;
+  const names = ["helvetica", "burst"];
+  return {
+    default: () => ({ variable: names[count++ % names.length] }),
+  };
+});
 
 import RootLayout, { metadata } from "./layout";
 
@@ -27,7 +31,7 @@ describe("RootLayout", () => {
     expect(element.type).toBe("html");
     expect(element.props).toMatchObject({
       lang: "en",
-      className: "geist-sans geist-mono helvetica h-full antialiased",
+      className: "geist-sans geist-mono helvetica burst h-full antialiased",
       suppressHydrationWarning: true,
     });
   });
