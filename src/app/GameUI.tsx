@@ -522,9 +522,12 @@ export default function GameUI({
       }
     }
 
-    setLoadError(null)
-    seedArtists(initialArtists ?? [])
-    setHighScore(parseInt(localStorage.getItem(HS_KEY(mode)) ?? '0', 10))
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setLoadError(null)
+      seedArtists(initialArtists ?? [])
+      setHighScore(parseInt(localStorage.getItem(HS_KEY(mode)) ?? '0', 10))
+    })
 
     fetch(`/api/game-artists/${mode}`, { signal: controller.signal })
       .then(async r => {
