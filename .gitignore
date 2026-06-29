@@ -43,3 +43,19 @@ next-env.d.ts
 
 # vscode
 .vscode/*
+
+
+.claude/
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.cursorignore
+.cursorindexingignore
+.windsurfrules
+.aider*
+.copilot/
+.github/copilot-instructions.md
+
+# scraped reference pages (contain third-party secrets/assets)
+docs/chartmasters/chartmasters_all_credits_page.html
+docs/chartmasters/chartmasters_all_credits_page_files/

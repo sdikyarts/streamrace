@@ -472,11 +472,32 @@ export default function GameUI({
   const keyGen = useRef(0)
   const nextKey = () => ++keyGen.current
 
-  const pickRandom = useCallback(
-    (exclude: GameArtist[], fromPool: GameArtist[]): GameArtist => {
+  // Artists sorted descending by streams — rank 0 = most streams.
+  // Kept in a ref so pickNear can read it without triggering re-renders.
+  const sortedPool = useRef<GameArtist[]>([])
+
+  // Pick the next artist from within ±windowSize ranks of `anchor`.
+  // Window shrinks as score rises so comparisons get tighter and harder.
+  const pickNear = useCallback(
+    (anchor: GameArtist, exclude: GameArtist[], currentScore: number): GameArtist => {
+      const sorted = sortedPool.current
       const excludedNames = new Set(exclude.map(a => a.name))
-      const filtered = fromPool.filter(a => !excludedNames.has(a.name))
-      return filtered[Math.floor(Math.random() * filtered.length)] ?? fromPool[0]
+      const available = sorted.filter(a => !excludedNames.has(a.name))
+      if (available.length === 0) return sorted[0]
+
+      const anchorIdx = sorted.findIndex(a => a.name === anchor.name)
+      if (anchorIdx === -1) return available[Math.floor(Math.random() * available.length)]
+
+      // 20% wild card — picks from anywhere so all 1000 artists can appear over a session
+      if (Math.random() < 0.2) return available[Math.floor(Math.random() * available.length)]
+
+      // 150 ranks wide at score 0, narrows by 5 per point, floors at 20
+      const windowSize = Math.max(20, 150 - currentScore * 5)
+      const lo = Math.max(0, anchorIdx - windowSize)
+      const hi = Math.min(sorted.length - 1, anchorIdx + windowSize)
+      const candidates = sorted.slice(lo, hi + 1).filter(a => !excludedNames.has(a.name))
+      const from = candidates.length > 0 ? candidates : available
+      return from[Math.floor(Math.random() * from.length)]
     },
     [],
   )
@@ -488,11 +509,16 @@ export default function GameUI({
 
     const seedArtists = (artists: GameArtist[]) => {
       const valid = artists.filter(a => a.streams > 0)
-      const shuffled = shuffle(valid)
-      setPool(shuffled)
-      if (shuffled.length >= 2) {
-        setLeft({ artist: shuffled[0], key: nextKey() })
-        setRight({ artist: shuffled[1], key: nextKey() })
+      const sorted = [...valid].sort((a, b) => b.streams - a.streams)
+      sortedPool.current = sorted
+      setPool(valid)
+      if (sorted.length >= 2) {
+        // Left artist: random from the full pool (any tier)
+        const leftArtist = sorted[Math.floor(Math.random() * sorted.length)]
+        // Right artist: always near the left by rank, so the comparison is genuinely uncertain
+        const rightArtist = pickNear(leftArtist, [leftArtist], 0)
+        setLeft({ artist: leftArtist, key: nextKey() })
+        setRight({ artist: rightArtist, key: nextKey() })
       }
     }
 
@@ -508,11 +534,14 @@ export default function GameUI({
       .then(({ artists: fetched }: { artists: GameArtist[] }) => {
         if (cancelled) return
         const v = fetched.filter((a: GameArtist) => a.streams > 0)
-        const shuffled = shuffle(v)
-        setPool(shuffled)
-        if (shuffled.length >= 2) {
-          setLeft({ artist: shuffled[0], key: nextKey() })
-          setRight({ artist: shuffled[1], key: nextKey() })
+        const sorted = [...v].sort((a, b) => b.streams - a.streams)
+        sortedPool.current = sorted
+        setPool(v)
+        if (sorted.length >= 2) {
+          const leftArtist = sorted[Math.floor(Math.random() * sorted.length)]
+          const rightArtist = pickNear(leftArtist, [leftArtist], 0)
+          setLeft({ artist: leftArtist, key: nextKey() })
+          setRight({ artist: rightArtist, key: nextKey() })
         } else {
           setLoadError('Not enough playable artists yet.')
         }
@@ -554,7 +583,9 @@ export default function GameUI({
 
       setTimeout(() => {
         setPhase('transitioning')
-        const next = pickRandom([left.artist, right.artist], pool)
+        // The artist with more streams stays as the anchor; pick the next from nearby ranks
+        const anchor = leftStreams >= rightStreams ? left.artist : right.artist
+        const next = pickNear(anchor, [left.artist, right.artist], newScore)
 
         if (leftStreams > rightStreams) {
           setRight({ artist: next, key: nextKey() })
