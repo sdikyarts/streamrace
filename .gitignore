@@ -43,3 +43,15 @@ next-env.d.ts
 
 # vscode
 .vscode/*
+
+
+.claude/
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.cursorignore
+.cursorindexingignore
+.windsurfrules
+.aider*
+.copilot/
+.github/copilot-instructions.md
