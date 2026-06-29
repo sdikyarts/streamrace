@@ -1,24 +1,17 @@
 import { isValidElement } from "react";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("next/image", () => ({
-  default: (props: Record<string, unknown>) => ({
-    type: "img",
-    props,
-  }),
-}));
+import { describe, expect, it } from "vitest";
 
 import Home from "./page";
+import LandingPage from "./LandingPage";
 
 describe("Home", () => {
-  it("renders the starter page shell", () => {
+  it("renders the landing page without blocking on artist images", () => {
     const element = Home();
 
     expect(isValidElement(element)).toBe(true);
-    expect(element.type).toBe("div");
+    expect(element.type).toBe(LandingPage);
     expect(element.props).toMatchObject({
-      className:
-        "flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black",
+      initialArtists: [],
     });
   });
 });

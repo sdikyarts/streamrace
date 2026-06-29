@@ -492,6 +492,50 @@ describe("importAllCreditsRows validation error handling", () => {
     vi.doUnmock("./validate-all-credits");
   });
 
+  it("handles an empty import (no rows), covering the markDropouts early-return and the no-new-periods branch", async () => {
+    vi.resetModules();
+    vi.doMock("./validate-all-credits", () => ({
+      AllCreditsValidationError,
+      addLeadRankInDataset: (rows: ParsedAllCreditsRow[]) =>
+        rows.map((r) => ({ ...r, leadRankInDataset: 1 })),
+      validateFullAllCreditsRows: () => {},
+    }));
+
+    const { importAllCreditsRows: importFn } = await import("./import-all-credits");
+
+    const db = {
+      insert: () => ({
+        values: () => ({ returning: () => Promise.resolve([{ id: "run-1" }]) }),
+      }),
+      update: () => ({
+        set: () => ({ where: () => Promise.resolve([]) }),
+      }),
+      transaction: async (cb: (tx: unknown) => unknown) => {
+        const tx = {
+          insert: () => ({
+            values: () => ({
+              onConflictDoUpdate: () => ({ returning: () => Promise.resolve([]) }),
+            }),
+          }),
+          update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
+          select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }),
+        };
+        return cb(tx);
+      },
+    } as unknown as StreamRaceDb;
+
+    await expect(
+      importFn({ db, rows: [], sourceDate: "2026-06-22", collectionMethod: "markdown" }),
+    ).resolves.toMatchObject({
+      status: "success",
+      rowsFound: 0,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsDroppedOut: 0,
+      rowsReentered: 0,
+    });
+  });
+
   it("re-throws non-AllCreditsValidationError validation errors without recording anomalies", async () => {
     vi.resetModules();
     vi.doMock("./validate-all-credits", () => ({

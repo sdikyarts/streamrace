@@ -21,6 +21,7 @@ async function main() {
         id: artists.id,
         spotifyArtistId: artists.spotifyArtistId,
         displayName: artists.displayName,
+        imageUrl: artists.imageUrl,
         imageHash: artists.imageHash,
       })
       .from(artists)
@@ -50,8 +51,9 @@ async function main() {
         const genre = spotify.genres[0] ?? null;
         const displayName = spotify.name;
 
-        // Only write if something actually changed
-        const imageChanged = imageHash !== row.imageHash;
+        // Only write if something actually changed; also catches the case where
+        // imageUrl was wiped to null by a re-import while imageHash was preserved
+        const imageChanged = imageHash !== row.imageHash || (imageUrl !== null && row.imageUrl === null);
         const nameChanged = displayName !== row.displayName;
 
         if (!imageChanged && !nameChanged) {
