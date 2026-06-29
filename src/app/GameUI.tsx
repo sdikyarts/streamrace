@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 import type { GameArtist, GameMode } from '@/lib/game-artists'
 
@@ -67,6 +68,13 @@ const GAME_STYLES = `
   will-change: transform;
 }
 .sr-score:hover { transform: scale(1.06); }
+.sr-go-elem {
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transform-origin: center;
+  cursor: default;
+  will-change: transform;
+}
+.sr-go-elem:hover { transform: scale(1.06); }
 `
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -367,18 +375,15 @@ function ArtistPanel({
 
   return (
     <div style={{ ...abs, overflow: 'hidden' }}>
-      {/* Hidden img tag preloads the photo eagerly so it's ready before CSS bg applies */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={artist.imageUrl} alt="" aria-hidden style={{ display: 'none' }} />
-
-      {/* Photo background */}
-      <div
-        style={{
-          ...abs,
-          backgroundImage: `url(${artist.imageUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-        }}
+      {/* Photo background — next/image handles optimization, WebP, and preloading */}
+      <Image
+        src={artist.imageUrl}
+        alt=""
+        fill
+        quality={100}
+        sizes="50vw"
+        priority
+        style={{ objectFit: 'cover', objectPosition: 'center top' }}
       />
       {/* Dark overlay */}
       <div style={{ ...abs, background: 'rgba(0,0,0,0.45)' }} />
@@ -479,7 +484,7 @@ export default function GameUI({
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 30_000)
+    const timeoutId = window.setTimeout(() => controller.abort(), 90_000)
 
     const seedArtists = (artists: GameArtist[]) => {
       const valid = artists.filter(a => a.streams > 0)
@@ -513,7 +518,7 @@ export default function GameUI({
         }
       })
       .catch((err) => {
-        if (cancelled) return
+        if (cancelled || err?.name === 'AbortError') return
         console.error('[GameUI] Failed to fetch artists:', err)
         setLoadError('Failed to load artists. Check server logs.')
       })
@@ -566,7 +571,6 @@ export default function GameUI({
     } else {
       setTimeout(() => {
         setPhase('gameover')
-        setTimeout(() => router.push('/'), 1500)
       }, 1600)
     }
   }
@@ -663,44 +667,117 @@ export default function GameUI({
         <div
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            inset: 0,
             zIndex: 25,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.4em',
-            background: 'rgba(0,0,0,0.6)',
+            gap: 'clamp(18px, 4vh, 52px)',
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
           }}
         >
-          <p
+          {/* GAME OVER!!! — white box + gradient text, same as artist name but bigger */}
+          <div
+            className="sr-name-box"
             style={{
+              backgroundColor: 'white',
+              padding: '0.5vh 1.5vw',
+              overflow: 'visible',
               fontFamily: 'var(--font-helvetica)',
               fontWeight: 700,
               fontStyle: 'italic',
-              color: '#FFFBF7',
-              fontSize: 'clamp(28px, 4vw, 64px)',
-              textShadow: '0 2px 20px rgba(0,0,0,0.8)',
-              margin: 0,
+              fontSize: 'clamp(26px, 3.2vw, 52px)',
+              userSelect: 'none',
+              boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
             }}
           >
-            GAME OVER
-          </p>
-          <p
+            <div style={{ display: 'contents' }}>
+              <span className="sr-name-text">GAME OVER!!!</span>
+            </div>
+          </div>
+
+          {/* Middle group: You scored + score + high score */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px, 2vh, 22px)' }}>
+            <DescText>You scored:</DescText>
+
+            {/* Score — same as StreamCountDisplay but bigger */}
+            <div
+              className="sr-stream"
+              style={{
+                backgroundImage: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
+                backgroundSize: '200% 100%',
+                padding: '2.5vh 2.5vw',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
+                userSelect: 'none',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFBF7',
+                  fontFamily: 'var(--font-burst)',
+                  fontSize: 'clamp(50px, 8vw, 140px)',
+                  lineHeight: 0.75,
+                  whiteSpace: 'nowrap',
+                  position: 'relative',
+                  left: '-0.06em',
+                  top: '0.08em',
+                }}
+              >
+                {score.toLocaleString()}
+              </div>
+            </div>
+
+            {/* High Score — GuessButton style, centered, no icon, non-interactive */}
+            <div
+              className="sr-btn"
+              style={{
+                width: 'clamp(200px, 22vw, 380px)',
+                color: '#FFFBF7',
+                backgroundImage: 'linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)',
+                backgroundSize: '300% 100%',
+                fontSize: 'clamp(13px, 1.5vw, 25px)',
+                padding: '0.75vh 0.75vw',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                fontFamily: 'var(--font-helvetica)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                textAlign: 'center',
+                userSelect: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              High Score: {highScore.toLocaleString()}
+            </div>
+          </div>
+
+          {/* BACK TO HOME — gray, no gradient, cursor pointer */}
+          <button
+            onClick={() => router.push('/')}
+            className="sr-go-elem"
             style={{
-              fontFamily: 'var(--font-helvetica)',
-              fontStyle: 'italic',
+              width: 'clamp(200px, 22vw, 380px)',
               color: '#FFFBF7',
-              fontSize: 'clamp(14px, 1.5vw, 24px)',
-              opacity: 0.7,
-              margin: 0,
+              backgroundColor: '#6d6d6d',
+              fontSize: 'clamp(13px, 1.5vw, 25px)',
+              padding: '0.75vh 0.75vw',
+              border: 'none',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+              fontFamily: 'var(--font-helvetica)',
+              fontWeight: 700,
+              fontStyle: 'italic',
+              cursor: 'pointer',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
             }}
           >
-            Score: {score}
-          </p>
+            BACK TO HOME
+          </button>
         </div>
       )}
     </div>

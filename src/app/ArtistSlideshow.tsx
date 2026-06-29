@@ -58,7 +58,7 @@ const DEFAULT_POS: FacePos = { x: 50, y: 38, topY: 15 }
 // CSS: offset_y = bg_pos_y/100 * (element_h - scaled_h)
 // We want face_pixel_y = -offset_y + element_h/2
 //   => bg_pos_y = (face_pixel_y - element_h/2) / (scaled_h - element_h) * 100
-function focalToBgPos(focal: { x: number; y: number }, el: HTMLDivElement): { x: number; y: number } {
+function focalToBgPos(focal: { x: number; y: number }, el: HTMLElement): { x: number; y: number } {
   const elW = el.offsetWidth
   const elH = el.offsetHeight
   // background-size: cover with square Spotify images → rendered size = max dimension
@@ -300,8 +300,8 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
 
   const wrapper0Ref = useRef<HTMLDivElement>(null)
   const wrapper1Ref = useRef<HTMLDivElement>(null)
-  const bg0Ref = useRef<HTMLDivElement>(null)
-  const bg1Ref = useRef<HTMLDivElement>(null)
+  const bg0Ref = useRef<HTMLImageElement>(null)
+  const bg1Ref = useRef<HTMLImageElement>(null)
 
   function getWrapperEl(slot: 0 | 1) {
     return (slot === 0 ? wrapper0Ref : wrapper1Ref).current!
@@ -350,10 +350,10 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
     }
 
     el.style.transition = 'none'
-    el.style.backgroundPosition = `${startX}% ${startY}%`
+    el.style.objectPosition = `${startX}% ${startY}%`
     el.getBoundingClientRect()
-    el.style.transition = `background-position ${SLIDE_DURATION + FADE_DURATION}ms linear`
-    el.style.backgroundPosition = `${endX}% ${endY}%`
+    el.style.transition = `object-position ${SLIDE_DURATION + FADE_DURATION}ms linear`
+    el.style.objectPosition = `${endX}% ${endY}%`
   }
 
   function showNameFirst(url: string) {
@@ -410,8 +410,8 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
       await Promise.all([firstDetection, secondDetection])
       if (cancelled) return
 
-      getBgEl(0).style.backgroundImage = `url(${first})`
-      getBgEl(1).style.backgroundImage = `url(${second})`
+      getBgEl(0).src = first
+      getBgEl(1).src = second
       layerUrls.current = [first, second]
 
       startPan(0, first)
@@ -472,7 +472,7 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
       innerTimer = setTimeout(() => {
         innerTimer = null
         const next = getNext()
-        getBgEl(outgoing).style.backgroundImage = `url(${next})`
+        getBgEl(outgoing).src = next
         layerUrls.current[outgoing] = next
         cacheDetect(next)
         for (const url of peekAhead(2)) cacheDetect(url)
@@ -516,12 +516,13 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
           className="absolute inset-0"
           style={{ opacity: 0 }}
         >
-          <div
+          <img
             ref={bg0Ref}
-            className="absolute inset-0"
+            alt=""
+            className="absolute inset-0 w-full h-full"
             style={{
-              backgroundSize: 'cover',
-              backgroundPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
+              objectFit: 'cover',
+              objectPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
             }}
           />
         </div>
@@ -530,12 +531,13 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
           className="absolute inset-0"
           style={{ opacity: 0 }}
         >
-          <div
+          <img
             ref={bg1Ref}
-            className="absolute inset-0"
+            alt=""
+            className="absolute inset-0 w-full h-full"
             style={{
-              backgroundSize: 'cover',
-              backgroundPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
+              objectFit: 'cover',
+              objectPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
             }}
           />
         </div>
