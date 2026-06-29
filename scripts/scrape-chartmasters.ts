@@ -91,8 +91,12 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
         let tableEl: Element | null = null;
         if (allCreditsHeading) {
           let el = allCreditsHeading.nextElementSibling;
-          while (el && el.tagName !== "TABLE") el = el.nextElementSibling;
-          if (el?.tagName === "TABLE" && $.fn.dataTable.isDataTable(el)) tableEl = el;
+          while (el && !tableEl) {
+            const candidate =
+              el.tagName === "TABLE" ? el : el.querySelector("table");
+            if (candidate && $.fn.dataTable.isDataTable(candidate)) tableEl = candidate;
+            el = el.nextElementSibling;
+          }
         }
 
         if (!tableEl) return null;
@@ -130,8 +134,16 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
       );
       if (!heading) return null;
       let el = heading.nextElementSibling;
-      while (el && el.tagName !== "TABLE") el = el.nextElementSibling;
-      return el?.tagName === "TABLE" ? el : null;
+      let result: Element | null = null;
+      while (el && !result) {
+        if (el.tagName === "TABLE") result = el;
+        else {
+          const nested = el.querySelector("table");
+          if (nested) result = nested;
+        }
+        el = el.nextElementSibling;
+      }
+      return result;
     });
 
     const tableId = await page.evaluate(
@@ -160,18 +172,20 @@ async function scrapeRows(): Promise<ParsedAllCreditsRow[]> {
 
     const domRows = await page.evaluate((tableEl): unknown[][] => {
       const table = tableEl as Element | null;
+      if (!table) return [];
       const rows: unknown[][] = [];
-      (table ?? document).querySelectorAll("table tbody tr").forEach((tr) => {
+      table.querySelectorAll("tbody tr").forEach((tr) => {
         const cells = tr.querySelectorAll("td");
-        if (cells.length < 6) return;
-        const anchor = cells[2]?.querySelector("a");
+        // cells[2] is the image/pic column; artist is cells[3], streams are cells[4-6]
+        if (cells.length < 7) return;
+        const anchor = cells[3]?.querySelector("a");
         rows.push([
           cells[0]?.textContent?.trim() ?? "",
           cells[1]?.textContent?.trim() ?? "",
-          anchor?.outerHTML ?? cells[2]?.textContent?.trim() ?? "",
-          cells[3]?.textContent?.trim() ?? "0",
+          anchor?.outerHTML ?? cells[3]?.textContent?.trim() ?? "",
           cells[4]?.textContent?.trim() ?? "0",
           cells[5]?.textContent?.trim() ?? "0",
+          cells[6]?.textContent?.trim() ?? "0",
         ]);
       });
       return rows;
