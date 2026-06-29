@@ -18,6 +18,11 @@ const helvetica = localFont({
   variable: "--font-helvetica",
   weight: "700",
   style: "italic",
+})
+
+const burstSpeed = localFont({
+  src: "./fonts/Burst Speed.ttf",
+  variable: "--font-burst",
 });
 
 export const metadata: Metadata = {
@@ -33,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${helvetica.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${helvetica.variable} ${burstSpeed.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col">

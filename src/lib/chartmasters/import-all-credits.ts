@@ -255,7 +255,7 @@ async function upsertArtists(
         chartmastersName: excluded("chartmasters_name"),
         normalizedName: excluded("normalized_name"),
         chartmastersUrl: excluded("chartmasters_url"),
-        imageUrl: excluded("image_url"),
+        imageUrl: sql`COALESCE(excluded.image_url, ${artists.imageUrl})`,
         gender: excluded("gender"),
         language: excluded("language"),
         genre: excluded("genre"),

@@ -2,6 +2,37 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+const SLIDESHOW_STYLES = `
+@keyframes artistNameIn {
+  from { opacity: 0; transform: translateY(-40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.artist-label-wrap {
+  visibility: hidden;
+  overflow: visible;
+  transform-origin: right top;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.artist-label-wrap:hover { transform: scale(1.06); }
+.artist-label-text {
+  display: inline-block;
+  white-space: nowrap;
+  background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
+  background-size: 200% 100%;
+  background-position: 0% 0%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: background-position 0.5s ease;
+  padding-top: 0.15em;
+  padding-bottom: 0.15em;
+  padding-right: 0.15em;
+  padding-left: 0.15em;
+}
+.artist-label-wrap:hover .artist-label-text { background-position: 100% 0%; }
+`
+
 const SLIDE_DURATION = 7000
 const FADE_DURATION = 1800
 // Small gap above the top of the head before the pan starts (% of image height)
@@ -307,8 +338,16 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
 
     // Pan starts just above the top of the head, ends at face/subject center
     const aboveHead = Math.max(0, focal.topY - HEAD_MARGIN)
-    const { x: startX, y: startY } = focalToBgPos({ x: focal.x, y: aboveHead }, el)
-    const { x: endX, y: endY } = focalToBgPos(focal, el)
+    let { x: startX, y: startY } = focalToBgPos({ x: focal.x, y: aboveHead }, el)
+    let { x: endX, y: endY } = focalToBgPos(focal, el)
+
+    // When the focal point is in the upper quarter of the image, focalToBgPos
+    // clamps both start and end to 0% — no visible movement. Fall back to a
+    // gentle top-to-centre pan so there's always some motion.
+    if (Math.abs(startY - endY) < 4 && Math.abs(startX - endX) < 4) {
+      startY = 0
+      endY = 30
+    }
 
     el.style.transition = 'none'
     el.style.backgroundPosition = `${startX}% ${startY}%`
@@ -353,6 +392,8 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
   useEffect(() => {
     let started = false
     let cancelled = false
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 10_000)
 
     async function init(data: { url: string; name: string }[]) {
       if (started || !data.length) return
@@ -385,22 +426,37 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
     const immediate = initialArtists?.length ? initialArtists : loadCachedArtists()
     if (immediate) init(immediate)
 
-    fetch('/api/artist-images')
-      .then(r => r.json())
+    fetch('/api/artist-images', { signal: controller.signal })
+      .then(async r => {
+        if (!r.ok) {
+          throw new Error(`Artist image request failed with ${r.status}`)
+        }
+        return r.json()
+      })
       .then(({ artists }: { artists: { url: string; name: string }[] }) => {
+        if (cancelled) return
         saveCachedArtists(artists)
         init(artists)  // no-op if already started
       })
       .catch(() => {
         // Keep the static hero usable even if the slideshow API is unavailable.
       })
+      .finally(() => {
+        window.clearTimeout(timeoutId)
+      })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+      controller.abort()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (!ready) return
+
+    let innerTimer: ReturnType<typeof setTimeout> | null = null
 
     const timer = setInterval(() => {
       const outgoing = activeRef.current
@@ -413,7 +469,8 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
       transitionName(inUrl)
       activeRef.current = incoming
 
-      setTimeout(() => {
+      innerTimer = setTimeout(() => {
+        innerTimer = null
         const next = getNext()
         getBgEl(outgoing).style.backgroundImage = `url(${next})`
         layerUrls.current[outgoing] = next
@@ -422,40 +479,17 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
       }, FADE_DURATION)
     }, SLIDE_DURATION)
 
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+      if (innerTimer !== null) clearTimeout(innerTimer)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 
   return (
     <>
-      <style>{`
-        @keyframes artistNameIn {
-          from { opacity: 0; transform: translateY(-40px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .artist-label-text {
-          display: inline-block;
-          white-space: nowrap;
-          background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
-          background-size: 200% 100%;
-          background-position: 0% 0%;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          transition: background-position 0.5s ease;
-        }
-        .artist-label-wrap {
-          visibility: hidden;
-          transform-origin: right top;
-          transition: transform 0.2s ease;
-        }
-        .artist-label-wrap:hover {
-          transform: scale(1.06);
-        }
-        .artist-label-wrap:hover .artist-label-text {
-          background-position: 100% 0%;
-        }
-      `}</style>
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: SLIDESHOW_STYLES }} />
 
       <div
         className="absolute top-0 right-0 bottom-0 w-[67%]"
@@ -508,22 +542,16 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
       </div>
 
       {/* Artist name — outside the mask so it's never partially faded */}
+      {/* Hover handled purely by .artist-label-wrap CSS in SLIDESHOW_STYLES above */}
       <div
         ref={nameWrapRef}
         className="absolute z-[2] artist-label-wrap"
-        onMouseEnter={() => {
-          if (nameWrapRef.current) nameWrapRef.current.style.transform = 'scale(1.06)'
-          if (nameTextRef.current) nameTextRef.current.style.backgroundPosition = '100% 0%'
-        }}
-        onMouseLeave={() => {
-          if (nameWrapRef.current) nameWrapRef.current.style.transform = ''
-          if (nameTextRef.current) nameTextRef.current.style.backgroundPosition = ''
-        }}
         style={{
           top: 36,
           right: 36,
           backgroundColor: 'white',
-          padding: '0.55vh 0.9vw',
+          padding: '0.4vh 0.4vw',
+          overflow: 'visible',
           fontFamily: 'var(--font-helvetica)',
           fontWeight: 700,
           fontStyle: 'italic',
@@ -532,7 +560,9 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
           boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
         }}
       >
-        <span ref={nameTextRef} className="artist-label-text" />
+        <div style={{ display: 'contents', position: 'relative' }}>
+          <span ref={nameTextRef} className="artist-label-text" />
+        </div>
       </div>
     </>
   )

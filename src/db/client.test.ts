@@ -7,15 +7,15 @@ const dbClientMocks = vi.hoisted(() => ({
     marker: "drizzle-db",
   })),
   end: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-  pools: [] as { options: { connectionString: string } }[],
+  pools: [] as { options: Record<string, unknown> }[],
 }));
 
 vi.mock("@neondatabase/serverless", () => ({
   Pool: class MockPool {
-    readonly options: { connectionString: string };
+    readonly options: Record<string, unknown>;
     readonly end = dbClientMocks.end;
 
-    constructor(options: { connectionString: string }) {
+    constructor(options: Record<string, unknown>) {
       this.options = options;
       dbClientMocks.pools.push(this);
     }
@@ -65,6 +65,11 @@ describe("database client", () => {
 
     expect(dbClientMocks.pools[0].options).toEqual({
       connectionString: "postgres://direct",
+      max: 5,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000,
+      query_timeout: 8_000,
+      statement_timeout: 8_000,
     });
     expect(dbClientMocks.drizzle).toHaveBeenCalledWith(
       client.pool,

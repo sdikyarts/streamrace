@@ -5,7 +5,71 @@ import { useRouter } from 'next/navigation'
 
 import type { GameArtist, GameMode } from '@/lib/game-artists'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// Module-level constant — same reference every render, React never patches the DOM node.
+const GAME_STYLES = `
+@keyframes srSlideFromRight {
+  from { transform: translateX(60%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+@keyframes srSlideFromLeft {
+  from { transform: translateX(-60%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.sr-name-box {
+  overflow: visible;
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transform-origin: center;
+  cursor: default;
+  will-change: transform;
+}
+.sr-name-box:hover { transform: scale(1.06); }
+.sr-name-text {
+  display: block;
+  text-align: center;
+  background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
+  background-size: 200% 100%;
+  background-position: 0% 0%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: background-position 0.5s ease;
+  padding-top: 0.15em;
+  padding-bottom: 0.12em;
+  padding-right: 0.15em;
+  padding-left: 0.15em;
+}
+.sr-name-box:hover .sr-name-text { background-position: 100% 0%; }
+.sr-stream {
+  background-position: 0% 0%;
+  transition: background-position 0.5s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transform-origin: center;
+  cursor: default;
+  will-change: transform;
+}
+.sr-stream:hover { background-position: 100% 0%; transform: scale(1.06); }
+.sr-desc {
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transform-origin: center;
+  cursor: default;
+  will-change: transform;
+}
+.sr-desc:hover { transform: scale(1.06); }
+.sr-btn {
+  background-position: 0% 0%;
+  transition: background-position 0.5s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transform-origin: center;
+  will-change: transform;
+}
+.sr-btn:hover:not(:disabled) { background-position: 65% 0%; transform: scale(1.06); }
+.sr-score {
+  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  cursor: default;
+  will-change: transform;
+}
+.sr-score:hover { transform: scale(1.06); }
+`
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -16,43 +80,22 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function formatStreams(n: number): string {
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + 'B'
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(0) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K'
-  return n.toLocaleString()
-}
-
 const HS_KEY = (mode: GameMode) => `sr:hs:${mode}`
 
-// ── icons ─────────────────────────────────────────────────────────────────────
+// ── chevron icons ─────────────────────────────────────────────────────────────
 
-function BurstSpeedIcon({ size = '0.9em' }: { size?: string }) {
+function ChevronUp() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 22 28"
-      fill="none"
-      style={{ height: size, width: 'auto', display: 'block', flexShrink: 0 }}
-    >
-      <path d="M13 0L0 15h8L6 28L22 11h-9L13 0Z" fill="#FFFBF7" />
+    <svg viewBox="0 0 24 24" fill="none" style={{ height: '1.1em', width: 'auto', display: 'block', flexShrink: 0 }}>
+      <path d="M6 15L12 9L18 15" stroke="#FFFBF7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-// Reuse the two landing-page icons exactly
-function RadioWavesIcon() {
+function ChevronDown() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 26" fill="none" style={{ height: '0.9em', width: 'auto', display: 'block', flexShrink: 0 }}>
-      <path d="M5.24959 0C3.58338 1.66156 2.26187 3.63596 1.36098 5.80978C0.460092 7.98359 -0.00242127 10.314 9.53196e-06 12.6671C9.53196e-06 17.6121 2.00668 22.0912 5.24959 25.3342L7.77584 22.8079C6.44042 21.4794 5.38216 19.8988 4.66246 18.158C3.94276 16.4172 3.57596 14.5508 3.58334 12.6671C3.58334 8.7075 5.17793 5.10625 7.77584 2.52625L5.24959 0ZM30.5838 0L28.0575 2.52625C29.3913 3.85599 30.4485 5.43676 31.1681 7.1773C31.8877 8.91784 32.2554 10.7837 32.25 12.6671C32.25 16.6446 30.6554 20.2279 28.0575 22.8079L30.5838 25.3342C32.25 23.6726 33.5715 21.6982 34.4724 19.5244C35.3733 17.3506 35.8358 15.0202 35.8333 12.6671C35.8333 7.72208 33.8267 3.24292 30.5838 0ZM10.32 5.07042C9.3199 6.06652 8.52648 7.25042 7.98533 8.5541C7.44417 9.85778 7.16596 11.2555 7.16668 12.6671C7.16668 15.6233 8.36709 18.3108 10.32 20.2637L12.8463 17.7375C12.1809 17.0714 11.6534 16.2808 11.2937 15.4108C10.934 14.5408 10.7493 13.6085 10.75 12.6671C10.75 10.6783 11.5563 8.88667 12.8463 7.59667L10.32 5.07042ZM25.5133 5.07042L22.9871 7.59667C23.6524 8.26272 24.18 9.05333 24.5396 9.92333C24.8993 10.7933 25.0841 11.7257 25.0833 12.6671C25.0833 14.6558 24.2771 16.4475 22.9871 17.7375L25.5133 20.2637C26.5134 19.2676 27.3069 18.0837 27.848 16.7801C28.3892 15.4764 28.6674 14.0786 28.6667 12.6671C28.6667 9.71083 27.4663 7.02333 25.5133 5.07042ZM17.9167 9.08375C16.9663 9.08375 16.0549 9.46128 15.3829 10.1333C14.7109 10.8053 14.3333 11.7167 14.3333 12.6671C14.3333 13.6174 14.7109 14.5289 15.3829 15.2009C16.0549 15.8729 16.9663 16.2504 17.9167 16.2504C18.867 16.2504 19.7785 15.8729 20.4505 15.2009C21.1225 14.5289 21.5 13.6174 21.5 12.6671C21.5 11.7167 21.1225 10.8053 20.4505 10.1333C19.7785 9.46128 18.867 9.08375 17.9167 9.08375Z" fill="#FFFBF7"/>
-    </svg>
-  )
-}
-
-function PinIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 33" fill="none" style={{ height: '0.9em', width: 'auto', display: 'block', flexShrink: 0 }}>
-      <path d="M16.1525 0C9.39791 0 3.95124 5.28542 3.61082 11.9325L0.170822 16.4654C-0.259178 17.0208 0.170822 17.9167 0.923322 17.9167H3.61082V23.2917C3.61082 25.2804 5.2054 26.875 7.19415 26.875H8.98582V32.25H21.5275V23.8471C25.7737 21.8404 28.6942 17.5583 28.6942 12.5417C28.6942 5.62583 23.1042 0 16.1525 0ZM15.2029 17.9167L8.98582 11.6458L11.4942 9.11958L15.2029 12.8462L22.6025 5.375L25.1108 7.90125L15.2029 17.9167Z" fill="#FFFBF7"/>
+    <svg viewBox="0 0 24 24" fill="none" style={{ height: '1.1em', width: 'auto', display: 'block', flexShrink: 0 }}>
+      <path d="M6 9L12 15L18 9" stroke="#FFFBF7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -63,174 +106,193 @@ type Phase = 'playing' | 'reveal' | 'transitioning' | 'gameover'
 
 interface ArtistState {
   artist: GameArtist
-  key: number  // force remount on change
+  key: number
 }
 
-// ── artist panel ──────────────────────────────────────────────────────────────
+// ── artist name label ─────────────────────────────────────────────────────────
 
-function ArtistPanel({
-  artist,
-  position,
-  streamsLabel,
-  showStreams,
-}: {
-  artist: GameArtist
-  position: 'left' | 'right'
-  streamsLabel: string
-  showStreams: boolean
-}) {
-  const [hoverName, setHoverName] = useState(false)
-  const [hoverStreams, setHoverStreams] = useState(false)
-
-  const maskStyle: React.CSSProperties =
-    position === 'left'
-      ? {
-          maskImage: 'linear-gradient(to left, transparent 0%, rgba(0,0,0,0.05) 5%, rgba(0,0,0,0.45) 20%, black 38%)',
-          WebkitMaskImage: 'linear-gradient(to left, transparent 0%, rgba(0,0,0,0.05) 5%, rgba(0,0,0,0.45) 20%, black 38%)',
-        }
-      : {
-          maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.05) 5%, rgba(0,0,0,0.45) 20%, black 38%)',
-          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.05) 5%, rgba(0,0,0,0.45) 20%, black 38%)',
-        }
-
+function ArtistNameLabel({ name }: { name: string }) {
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Photo */}
+    <div
+      className="sr-name-box"
+      style={{
+        backgroundColor: 'white',
+        padding: '0.32vh 0.8vw',
+        overflow: 'visible',
+        fontFamily: 'var(--font-helvetica)',
+        fontWeight: 700,
+        fontStyle: 'italic',
+        // Smaller than before — allows two-line wrap for long names
+        fontSize: 'clamp(16px, 2vw, 34px)',
+        userSelect: 'none',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+        // Max width so long names wrap to two lines instead of overflowing
+        maxWidth: 'min(40vw, 480px)',
+        textAlign: 'center',
+      }}
+    >
       <div
-        className="absolute inset-0"
         style={{
-          backgroundImage: `url(${artist.imageUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
+          position: 'relative',
         }}
-      />
-      {/* Edge fade toward center */}
-      <div className="absolute inset-0" style={maskStyle} />
-      {/* Dark bottom scrim for labels */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 30%, transparent 55%)',
-        }}
-      />
-
-      {/* Artist name label */}
-      <div
-        className="absolute z-[2]"
-        style={{
-          bottom: 80,
-          [position === 'left' ? 'left' : 'right']: 20,
-          backgroundColor: 'white',
-          padding: '0.6vh 0.9vw',
-          fontFamily: 'var(--font-helvetica)',
-          fontWeight: 700,
-          fontStyle: 'italic',
-          fontSize: 'clamp(16px, 2vw, 32px)',
-          userSelect: 'none',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-          transformOrigin: position === 'left' ? 'left top' : 'right top',
-          transform: hoverName ? 'scale(1.06)' : 'scale(1)',
-          transition: 'transform 0.2s ease',
-          cursor: 'default',
-        }}
-        onMouseEnter={() => setHoverName(true)}
-        onMouseLeave={() => setHoverName(false)}
       >
-        <span
-          style={{
-            display: 'inline-block',
-            backgroundImage: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
-            backgroundSize: '200% 100%',
-            backgroundPosition: hoverName ? '100% 0%' : '0% 0%',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            transition: 'background-position 0.5s ease',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {artist.name}
-        </span>
+        <span className="sr-name-text">{name}</span>
       </div>
-
-      {/* Stream count — only shown for Artist 1, or after reveal for Artist 2 */}
-      {showStreams && (
-        <div
-          className="absolute z-[2] flex items-center justify-between"
-          style={{
-            bottom: 24,
-            [position === 'left' ? 'left' : 'right']: 20,
-            background: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
-            backgroundSize: '200% 100%',
-            backgroundPosition: hoverStreams ? '100% 0%' : '0% 0%',
-            transition: 'background-position 0.5s ease, transform 0.2s ease',
-            padding: '0.55vh 0.75vw',
-            color: '#FFFBF7',
-            fontFamily: 'var(--font-helvetica)',
-            fontWeight: 700,
-            fontStyle: 'italic',
-            fontSize: 'clamp(13px, 1.5vw, 25px)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-            gap: '0.5em',
-            userSelect: 'none',
-            transformOrigin: 'center center',
-            transform: hoverStreams ? 'scale(1.06)' : 'scale(1)',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={() => setHoverStreams(true)}
-          onMouseLeave={() => setHoverStreams(false)}
-        >
-          <span>{streamsLabel}</span>
-          <BurstSpeedIcon />
-        </div>
-      )}
     </div>
   )
 }
 
+// ── stream count display ──────────────────────────────────────────────────────
+
+function StreamCountDisplay({ streams }: { streams: number }) {
+  return (
+    <div
+      className="sr-stream"
+      style={{
+        backgroundImage: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
+        backgroundSize: '200% 100%',
+        // Figma: outer box 454×117, inner text 414×77 → ~20px padding each side.
+        // At ~88px font: 20px vertical ≈ 2.2vh at 900px viewport height.
+        padding: '2vh 1.5vw',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
+        userSelect: 'none',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFBF7',
+          fontFamily: 'var(--font-burst)',
+          fontSize: 'clamp(30px, 5vw, 88px)',
+          lineHeight: 0.75,
+          whiteSpace: 'nowrap',
+          position: 'relative',
+          left: '-0.06em',
+          top: '0.08em',
+        }}
+      >
+        {streams.toLocaleString()}
+      </div>
+    </div>
+  )
+}
+
+// ── description text ──────────────────────────────────────────────────────────
+
+function DescText({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="sr-desc"
+      style={{
+        color: '#FFFBF7',
+        fontFamily: 'var(--font-helvetica)',
+        fontWeight: 700,
+        fontStyle: 'italic',
+        fontSize: 'clamp(12px, 1.5vw, 24px)',
+        textShadow: '0 1px 8px rgba(0,0,0,0.8)',
+        textAlign: 'center',
+        lineHeight: 1.3,
+        userSelect: 'none',
+        margin: 0,
+      }}
+    >
+      {children}
+    </p>
+  )
+}
+
+// ── guess buttons ─────────────────────────────────────────────────────────────
+
+function GuessButton({
+  label,
+  icon,
+  gradient,
+  onClick,
+  disabled,
+}: {
+  label: string
+  icon: React.ReactNode
+  gradient: string
+  onClick: () => void
+  disabled: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="sr-btn"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        color: '#FFFBF7',
+        // backgroundImage + backgroundSize inline; backgroundPosition in CSS
+        backgroundImage: gradient,
+        backgroundSize: '300% 100%',
+        fontSize: 'clamp(13px, 1.5vw, 25px)',
+        padding: '0.75vh 0.75vw',
+        border: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+        fontFamily: 'var(--font-helvetica)',
+        fontWeight: 700,
+        fontStyle: 'italic',
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span>{label}</span>
+      {icon}
+    </button>
+  )
+}
+
 // ── score box ─────────────────────────────────────────────────────────────────
+// Figma: two separate rows stacked — label row auto-width, value row auto-width.
+// They differ in width because the texts differ, creating the staggered-tab shape.
+// High Score aligns right (label narrower → tab on right), Current Score aligns left.
 
 function ScoreBox({
   label,
   value,
   corner,
+  bg,
 }: {
   label: string
   value: number
   corner: 'top-right' | 'top-left'
+  bg: string
 }) {
-  const [hovered, setHovered] = useState(false)
-  const origin = corner === 'top-right' ? 'top right' : 'top left'
-
-  const sharedBox: React.CSSProperties = {
+  const isRight = corner === 'top-right'
+  const rowBase: React.CSSProperties = {
+    backgroundColor: bg,
     fontFamily: 'var(--font-helvetica)',
     fontWeight: 700,
     fontStyle: 'italic',
     color: '#FFFBF7',
-    backgroundColor: '#111111',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
-    padding: '0.4vh 0.75vw',
     whiteSpace: 'nowrap',
     userSelect: 'none',
-    fontSize: 'clamp(11px, 1.15vw, 18px)',
   }
-
   return (
     <div
+      className="sr-score"
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         flexDirection: 'column',
-        gap: 4,
-        transformOrigin: origin,
-        transform: hovered ? 'scale(1.06)' : 'scale(1)',
-        transition: 'transform 0.2s ease',
-        cursor: 'default',
+        alignItems: isRight ? 'flex-end' : 'flex-start',
+        transformOrigin: isRight ? 'top right' : 'top left',
+        filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
-      <div style={sharedBox}>{label}</div>
-      <div style={sharedBox}>{value.toLocaleString()}</div>
+      <div style={{ ...rowBase, fontSize: 'clamp(10px, 1vw, 16px)', lineHeight: 1.2, padding: '0.25vh 0.6vw' }}>
+        {label}
+      </div>
+      <div style={{ ...rowBase, fontSize: 'clamp(14px, 1.65vw, 28px)', lineHeight: 1.15, padding: '0.25vh 0.6vw', marginTop: '-1px' }}>
+        {value.toLocaleString()}
+      </div>
     </div>
   )
 }
@@ -246,75 +308,138 @@ function ResultCircle({ correct, visible }: { correct: boolean; visible: boolean
         left: '50%',
         transform: `translate(-50%, -50%) scale(${visible ? 1 : 0})`,
         transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
-        width: 160,
-        height: 160,
+        width: 'clamp(70px, 8vw, 130px)',
+        height: 'clamp(70px, 8vw, 130px)',
         borderRadius: '50%',
-        backgroundColor: '#0e0e0e',
-        border: `5px solid ${correct ? '#22c55e' : '#ef4444'}`,
+        backgroundColor: '#FFFBF7',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 20,
-        boxShadow: `0 0 40px ${correct ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+        boxShadow: '0 4px 40px rgba(0,0,0,0.5)',
         pointerEvents: 'none',
       }}
     >
       {correct ? (
-        <svg viewBox="0 0 52 52" fill="none" style={{ width: 72, height: 72 }}>
-          <path d="M10 26L22 38L42 16" stroke="#22c55e" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        // Figma: gradient vector #800c81 → #e71616 → #bea500
+        <svg viewBox="0 0 52 52" fill="none" style={{ width: 'clamp(45px, 5.5vw, 80px)', height: 'clamp(45px, 5.5vw, 80px)', flexShrink: 0 }}>
+          <defs>
+            <linearGradient id="tick-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#800C81" />
+              <stop offset="50%" stopColor="#E71616" />
+              <stop offset="100%" stopColor="#BEA500" />
+            </linearGradient>
+          </defs>
+          <path d="M10 26L22 38L42 16" stroke="url(#tick-grad)" strokeWidth="5"
+            strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : (
-        <svg viewBox="0 0 52 52" fill="none" style={{ width: 72, height: 72 }}>
-          <path d="M16 16L36 36M36 16L16 36" stroke="#ef4444" strokeWidth="5" strokeLinecap="round" />
+        // Figma: red X fill+stroke #e71616
+        <svg viewBox="0 0 52 52" fill="none" style={{ width: 'clamp(45px, 5.5vw, 80px)', height: 'clamp(45px, 5.5vw, 80px)', flexShrink: 0 }}>
+          <path d="M16 16L36 36M36 16L16 36" stroke="#E71616" strokeWidth="5"
+            strokeLinecap="round" />
         </svg>
       )}
     </div>
   )
 }
 
-// ── comparison buttons ────────────────────────────────────────────────────────
+// ── artist panel ──────────────────────────────────────────────────────────────
 
-function GuessButton({
-  label,
-  icon,
-  gradient,
-  onClick,
+function ArtistPanel({
+  artist,
+  showStreams,
+  isRight,
+  modeLabel,
+  artist1Name,
+  onGuess,
   disabled,
 }: {
-  label: string
-  icon: React.ReactNode
-  gradient: string
-  onClick: () => void
+  artist: GameArtist
+  showStreams: boolean
+  isRight: boolean
+  modeLabel: string
+  artist1Name?: string
+  onGuess?: (g: 'higher' | 'lower') => void
   disabled: boolean
 }) {
-  const [hovered, setHovered] = useState(false)
+  const abs: React.CSSProperties = { position: 'absolute', inset: 0 }
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
-      style={{
-        background: gradient,
-        backgroundSize: '300% 100%',
-        backgroundPosition: hovered ? '65% 0%' : '0% 0%',
-        transition: 'background-position 0.5s ease, transform 0.2s ease',
-        fontSize: 'clamp(13px, 1.5vw, 25px)',
-        padding: '0.75vh 0.75vw',
-        border: 'none',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-        fontFamily: 'var(--font-helvetica)',
-        fontWeight: 700,
-        fontStyle: 'italic',
-        opacity: disabled ? 0.5 : 1,
-        transformOrigin: 'left center',
-      }}
-    >
-      <span className="whitespace-nowrap">{label}</span>
-      {icon}
-    </button>
+    <div style={{ ...abs, overflow: 'hidden' }}>
+      {/* Hidden img tag preloads the photo eagerly so it's ready before CSS bg applies */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={artist.imageUrl} alt="" aria-hidden style={{ display: 'none' }} />
+
+      {/* Photo background */}
+      <div
+        style={{
+          ...abs,
+          backgroundImage: `url(${artist.imageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+        }}
+      />
+      {/* Dark overlay */}
+      <div style={{ ...abs, background: 'rgba(0,0,0,0.45)' }} />
+
+      {/* Centered content column */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'clamp(5px, 1vh, 18px)',
+          padding: '0 3vw',
+          zIndex: 2,
+        }}
+      >
+        <ArtistNameLabel name={artist.name} />
+
+        <DescText>has</DescText>
+
+        {isRight && !showStreams ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'clamp(6px, 1vh, 14px)',
+              // Figma: 270px wide at 960px panel = 28% of panel = 14vw
+              width: 'clamp(130px, 14vw, 270px)',
+            }}
+          >
+            <GuessButton
+              label="Higher"
+              icon={<ChevronUp />}
+              gradient="linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)"
+              onClick={() => onGuess?.('higher')}
+              disabled={disabled}
+            />
+            <GuessButton
+              label="Lower"
+              icon={<ChevronDown />}
+              gradient="linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)"
+              onClick={() => onGuess?.('lower')}
+              disabled={disabled}
+            />
+          </div>
+        ) : (
+          <StreamCountDisplay streams={artist.streams} />
+        )}
+
+        {isRight && !showStreams ? (
+          <>
+            <DescText>{modeLabel} on Spotify than</DescText>
+            {artist1Name && <DescText>{artist1Name}</DescText>}
+          </>
+        ) : (
+          <DescText>{modeLabel} on Spotify</DescText>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -338,13 +463,10 @@ export default function GameUI({
   const [lastCorrect, setLastCorrect] = useState(true)
   const [rightRevealed, setRightRevealed] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
-  // track which direction the left panel slides in from
-  const [leftAnim, setLeftAnim] = useState<'left' | 'right'>('left')
 
   const keyGen = useRef(0)
   const nextKey = () => ++keyGen.current
 
-  // pick an artist from pool that isn't currently displayed
   const pickRandom = useCallback(
     (exclude: GameArtist[], fromPool: GameArtist[]): GameArtist => {
       const excludedNames = new Set(exclude.map(a => a.name))
@@ -357,7 +479,7 @@ export default function GameUI({
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 10_000)
+    const timeoutId = window.setTimeout(() => controller.abort(), 30_000)
 
     const seedArtists = (artists: GameArtist[]) => {
       const valid = artists.filter(a => a.streams > 0)
@@ -375,9 +497,7 @@ export default function GameUI({
 
     fetch(`/api/game-artists/${mode}`, { signal: controller.signal })
       .then(async r => {
-        if (!r.ok) {
-          throw new Error(`Artist request failed with ${r.status}`)
-        }
+        if (!r.ok) throw new Error(`Artist request failed with ${r.status}`)
         return r.json()
       })
       .then(({ artists: fetched }: { artists: GameArtist[] }) => {
@@ -397,16 +517,14 @@ export default function GameUI({
         console.error('[GameUI] Failed to fetch artists:', err)
         setLoadError('Failed to load artists. Check server logs.')
       })
-      .finally(() => {
-        window.clearTimeout(timeoutId)
-      })
+      .finally(() => window.clearTimeout(timeoutId))
 
     return () => {
       cancelled = true
       window.clearTimeout(timeoutId)
       controller.abort()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialArtists, mode])
 
   function handleGuess(guess: 'higher' | 'lower') {
@@ -434,32 +552,31 @@ export default function GameUI({
         const next = pickRandom([left.artist, right.artist], pool)
 
         if (leftStreams > rightStreams) {
-          // Artist 1 stays, new Artist 2
           setRight({ artist: next, key: nextKey() })
         } else {
-          // Artist 2 slides left to become Artist 1, new Artist 2
-          setLeftAnim('right')
           setLeft({ artist: right.artist, key: nextKey() })
           setRight({ artist: next, key: nextKey() })
         }
 
         setRightRevealed(false)
-        setTimeout(() => setPhase('playing'), 300)
+        setTimeout(() => {
+          setPhase('playing')
+        }, 300)
       }, 1600)
     } else {
       setTimeout(() => {
         setPhase('gameover')
-        setTimeout(() => router.push('/'), 1200)
+        setTimeout(() => router.push('/'), 1500)
       }, 1600)
     }
   }
 
-  const modeLabel = mode === 'all-credits' ? 'All-Credits Streams' : 'Lead Streams'
+  const modeLabel = mode === 'all-credits' ? 'all-credits streams' : 'lead streams'
   const busy = phase !== 'playing'
 
   if (!left || !right) {
     return (
-      <div className="relative w-screen h-screen bg-[#0e0e0e] flex items-center justify-center">
+      <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#0e0e0e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#FFFBF7', fontFamily: 'var(--font-helvetica)', fontStyle: 'italic' }}>
           {loadError ?? 'Loading...'}
         </span>
@@ -468,130 +585,96 @@ export default function GameUI({
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]">
-      <style>{`
-        @keyframes flyInEl {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .zoom-el {
-          transform-origin: left center;
-          transition: transform 0.2s ease;
-        }
-        .zoom-el:hover {
-          transform: scale(1.06);
-        }
-        @keyframes panelFadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes slideFromRight {
-          from { transform: translateX(60%); opacity: 0; }
-          to   { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideFromLeft {
-          from { transform: translateX(-60%); opacity: 0; }
-          to   { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
+    <div
+      style={{
+        position: 'relative',
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',
+        background: '#0e0e0e',
+      }}
+    >
+      {/* Injected directly — bypasses Tailwind/PostCSS pipeline */}
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: GAME_STYLES }} />
 
       {/* ── Two artist panels ── */}
-      <div className="absolute inset-0 flex">
+      <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
         {/* LEFT — Artist 1 */}
-        <div className="relative w-1/2 h-full overflow-hidden">
-          {/* Animated photo + labels */}
+        <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
           <div
             key={`left-${left.key}`}
-            className="absolute inset-0"
-            style={{ animation: `${leftAnim === 'right' ? 'slideFromRight' : 'slideFromLeft'} 0.4s ease` }}
+            style={{
+              position: 'absolute', inset: 0,
+              animation: 'srSlideFromLeft 0.4s ease',
+            }}
           >
             <ArtistPanel
               artist={left.artist}
-              position="left"
-              streamsLabel={formatStreams(left.artist.streams)}
               showStreams
+              isRight={false}
+              modeLabel={modeLabel}
+              disabled={busy}
             />
           </div>
 
-          {/* High Score — top-right of left panel (near center divide) */}
-          <div
-            className="absolute z-[5]"
-            style={{ top: 20, right: 16 }}
-          >
-            <ScoreBox label="HIGH SCORE" value={highScore} corner="top-right" />
+          {/* High Score — top-right of left panel */}
+          <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 5 }}>
+            <ScoreBox label="High Score" value={highScore} corner="top-right" bg="#c59003" />
           </div>
         </div>
 
         {/* RIGHT — Artist 2 */}
-        <div className="relative w-1/2 h-full overflow-hidden">
-          {/* Animated photo + labels */}
+        <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
           <div
             key={`right-${right.key}`}
-            className="absolute inset-0"
-            style={{ animation: 'slideFromRight 0.4s ease' }}
+            style={{ position: 'absolute', inset: 0, animation: 'srSlideFromRight 0.4s ease' }}
           >
             <ArtistPanel
               artist={right.artist}
-              position="right"
-              streamsLabel={formatStreams(right.artist.streams)}
               showStreams={rightRevealed}
+              isRight
+              modeLabel={modeLabel}
+              artist1Name={left.artist.name}
+              onGuess={handleGuess}
+              disabled={busy}
             />
           </div>
 
-          {/* Current Score — top-left of right panel (near center divide) */}
-          <div
-            className="absolute z-[5]"
-            style={{ top: 20, left: 16 }}
-          >
-            <ScoreBox label="CURRENT SCORE" value={score} corner="top-left" />
-          </div>
-
-          {/* Guess buttons — bottom of right panel */}
-          <div
-            className="absolute z-[5]"
-            style={{
-              bottom: 24,
-              left: 20,
-              width: 'clamp(180px, 18.5vw, 350px)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.2vh',
-            }}
-          >
-            <GuessButton
-              label={`HIGHER ${modeLabel.toUpperCase()}`}
-              icon={<RadioWavesIcon />}
-              gradient="linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)"
-              onClick={() => handleGuess('higher')}
-              disabled={busy}
-            />
-            <GuessButton
-              label={`LOWER ${modeLabel.toUpperCase()}`}
-              icon={<PinIcon />}
-              gradient="linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)"
-              onClick={() => handleGuess('lower')}
-              disabled={busy}
-            />
+          {/* Current Score — top-left of right panel */}
+          <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 5 }}>
+            <ScoreBox label="Current Score" value={score} corner="top-left" bg="#6d6d6d" />
           </div>
         </div>
       </div>
 
-      {/* ── Center divider line ── */}
+      {/* ── Center divider ── */}
       <div
-        className="absolute top-0 bottom-0 pointer-events-none z-[10]"
-        style={{ left: '50%', transform: 'translateX(-50%)', width: 2, background: 'rgba(255,255,255,0.08)' }}
+        style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: 'rgba(255,255,255,0.08)', pointerEvents: 'none', zIndex: 10 }}
       />
 
       {/* ── Result circle ── */}
-      <div className="absolute inset-0 pointer-events-none z-[15]" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <ResultCircle correct={lastCorrect} visible={phase === 'reveal' || phase === 'gameover'} />
       </div>
 
       {/* ── Game over overlay ── */}
       {phase === 'gameover' && (
         <div
-          className="absolute inset-0 z-[25] flex flex-col items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.6)' }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 25,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4em',
+            background: 'rgba(0,0,0,0.6)',
+          }}
         >
           <p
             style={{
@@ -601,7 +684,7 @@ export default function GameUI({
               color: '#FFFBF7',
               fontSize: 'clamp(28px, 4vw, 64px)',
               textShadow: '0 2px 20px rgba(0,0,0,0.8)',
-              marginBottom: '0.5em',
+              margin: 0,
             }}
           >
             GAME OVER
@@ -613,6 +696,7 @@ export default function GameUI({
               color: '#FFFBF7',
               fontSize: 'clamp(14px, 1.5vw, 24px)',
               opacity: 0.7,
+              margin: 0,
             }}
           >
             Score: {score}
