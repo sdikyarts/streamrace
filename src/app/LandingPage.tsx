@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import ArtistSlideshow from './ArtistSlideshow'
 
@@ -11,13 +11,33 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
   const [creditsHovered, setCreditsHovered] = useState(false)
   const [leadsHovered, setLeadsHovered] = useState(false)
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelH, setPanelH] = useState(180)
+
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const update = () => setPanelH(panel.offsetHeight)
+    update()
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(update)
+      ro.observe(panel)
+      return () => ro.disconnect()
+    }
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]">
+    <div
+      className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]"
+      style={{ '--panel-h': `${panelH}px` } as React.CSSProperties}
+    >
       <ArtistSlideshow initialArtists={initialArtists} />
 
       {/* Left-edge gradient: covers the image behind the UI panel */}
       <div
-        className="absolute inset-0 z-[1] pointer-events-none"
+        className="bg-gradient-overlay absolute inset-0 z-[1] pointer-events-none"
         style={{
           background: 'linear-gradient(to right, #0e0e0e 18%, rgba(14,14,14,0.78) 34%, rgba(14,14,14,0.3) 52%, transparent 66%)',
         }}
@@ -35,10 +55,39 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
         .zoom-el:hover {
           transform: scale(1.06);
         }
+
+        @media (max-width: 1024px) {
+          .bg-gradient-overlay {
+            background: linear-gradient(to top, #0e0e0e 18%, rgba(14,14,14,0.78) 34%, rgba(14,14,14,0.3) 52%, transparent 66%) !important;
+          }
+          .ui-panel {
+            top: auto !important;
+            left: 50% !important;
+            bottom: 6vh !important;
+            transform: translateX(-50%) !important;
+            width: min(70vw, 320px) !important;
+          }
+          .zoom-el {
+            transform-origin: center center !important;
+          }
+          .zoom-el:active {
+            transform: scale(1.06) !important;
+          }
+          .start-btn:active {
+            background-position: 100% 0% !important;
+          }
+          .credits-link:active {
+            background-position: 65% 0% !important;
+          }
+          .leads-link:active {
+            background-position: 65% 0% !important;
+          }
+        }
       `}</style>
 
       <div
-        className="absolute z-[2]"
+        ref={panelRef}
+        className="ui-panel absolute z-[2]"
         style={{
           top: '50%',
           left: '8.7vw',
@@ -73,7 +122,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             onClick={() => setExpanded(!expanded)}
             onMouseEnter={() => setBtnHovered(true)}
             onMouseLeave={() => setBtnHovered(false)}
-            className="flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
+            className="start-btn flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
             style={{
               background: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
               backgroundSize: '200% 100%',
@@ -116,7 +165,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               href="/all-credits"
               onMouseEnter={() => setCreditsHovered(true)}
               onMouseLeave={() => setCreditsHovered(false)}
-              className="flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              className="credits-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',
@@ -137,7 +186,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               href="/lead-streams"
               onMouseEnter={() => setLeadsHovered(true)}
               onMouseLeave={() => setLeadsHovered(false)}
-              className="flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              className="leads-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',

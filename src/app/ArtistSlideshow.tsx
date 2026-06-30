@@ -31,6 +31,37 @@ const SLIDESHOW_STYLES = `
   padding-left: 0.15em;
 }
 .artist-label-wrap:hover .artist-label-text { background-position: 100% 0%; }
+
+@media (max-width: 1024px) {
+  .slideshow-container {
+    width: 100% !important;
+    left: 0 !important;
+    -webkit-mask-image: linear-gradient(to bottom,
+      black 0%, black 38%,
+      rgba(0,0,0,0.92) 50%, rgba(0,0,0,0.60) 60%,
+      rgba(0,0,0,0.22) 72%, transparent 83%
+    ) !important;
+    mask-image: linear-gradient(to bottom,
+      black 0%, black 38%,
+      rgba(0,0,0,0.92) 50%, rgba(0,0,0,0.60) 60%,
+      rgba(0,0,0,0.22) 72%, transparent 83%
+    ) !important;
+  }
+  .artist-label-wrap {
+    top: auto !important;
+    right: 0 !important;
+    left: 0 !important;
+    width: max-content !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    bottom: calc(6vh + var(--panel-h, 180px) + 2vh) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+  }
+  .artist-label-wrap:hover { transform: scale(1.06) !important; }
+  .artist-label-wrap:active { transform: scale(1.06) !important; }
+  .artist-label-wrap:active .artist-label-text { background-position: 100% 0% !important; }
+}
 `
 
 const SLIDE_DURATION = 7000
@@ -497,7 +528,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
       <style dangerouslySetInnerHTML={{ __html: SLIDESHOW_STYLES }} />
 
       <div
-        className="absolute top-0 right-0 bottom-0 w-[67%]"
+        className="slideshow-container absolute top-0 right-0 bottom-0 w-[67%]"
         style={(() => {
           const mask = [
             'linear-gradient(to right,',
