@@ -15,13 +15,8 @@ on:
         type: choice
         options:
           - scrape:source
-          - import:source:file
           - enrich:spotify
           - enrich:musicbrainz
-      source_date:
-        description: 'Source date (YYYY-MM-DD) — import:source:file only, defaults to today'
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -52,10 +47,4 @@ jobs:
           DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-          SOURCE_DATE: ${{ inputs.source_date }}
-        run: |
-          if [ "${{ inputs.script }}" = "import:source:file" ] && [ -n "$SOURCE_DATE" ]; then
-            npm run import:source:file -- "$SOURCE_DATE"
-          else
-            npm run ${{ inputs.script }}
-          fi
+        run: npm run ${{ inputs.script }}
