@@ -1,0 +1,62 @@
+name: Daily Update
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 8:00 AM UTC every day
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        include:
+          - name: production
+            app_env: production
+          - name: staging
+            app_env: staging
+      fail-fast: false      # if one env fails, still run the other
+
+    name: Update (${{ matrix.name }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Scrape & import streams
+        run: npm run scrape:source
+        env:
+          APP_ENV: ${{ matrix.app_env }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
+
+      - name: Enrich artists from Spotify
+        run: npm run enrich:spotify
+        env:
+          APP_ENV: ${{ matrix.app_env }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+
+      - name: Enrich artists from MusicBrainz
+        run: npm run enrich:musicbrainz
+        env:
+          APP_ENV: ${{ matrix.app_env }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DIRECT_DATABASE_URL_STAGING: ${{ secrets.DIRECT_DATABASE_URL_STAGING }}
