@@ -7,9 +7,9 @@ import {
   dataIngestionRuns,
 } from "@/db/schema";
 import {
-  CHARTMASTERS_ALL_CREDITS_SOURCE_TABLE,
-  CHARTMASTERS_SOURCE_NAME,
-} from "@/lib/chartmasters/types";
+  ALL_CREDITS_SOURCE_TABLE,
+  SOURCE_NAME,
+} from "@/lib/source/types";
 
 export const runtime = "nodejs";
 
@@ -64,10 +64,10 @@ export async function GET() {
       .from(dataIngestionRuns)
       .where(
         and(
-          eq(dataIngestionRuns.sourceName, CHARTMASTERS_SOURCE_NAME),
+          eq(dataIngestionRuns.sourceName, SOURCE_NAME),
           eq(
             dataIngestionRuns.sourceTable,
-            CHARTMASTERS_ALL_CREDITS_SOURCE_TABLE,
+            ALL_CREDITS_SOURCE_TABLE,
           ),
           eq(dataIngestionRuns.status, "success"),
         ),
