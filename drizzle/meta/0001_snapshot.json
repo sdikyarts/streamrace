@@ -1,0 +1,1281 @@
+{
+  "id": "215e1913-a17f-4ab4-8190-787c194592b9",
+  "prevId": "04316c75-4299-405a-88bd-1f43fab334e0",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.artist_stream_current": {
+      "name": "artist_stream_current",
+      "schema": "",
+      "columns": {
+        "artist_id": {
+          "name": "artist_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "latest_snapshot_id": {
+          "name": "latest_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_date": {
+          "name": "source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currently_ranked": {
+          "name": "currently_ranked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "first_seen_on": {
+          "name": "first_seen_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_seen_on": {
+          "name": "last_seen_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dropped_out_on": {
+          "name": "dropped_out_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reentered_on": {
+          "name": "reentered_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_credit_rank": {
+          "name": "all_credit_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_all_credit_rank": {
+          "name": "previous_all_credit_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_credit_rank_change": {
+          "name": "all_credit_rank_change",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_rank_in_dataset": {
+          "name": "lead_rank_in_dataset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_lead_rank_in_dataset": {
+          "name": "previous_lead_rank_in_dataset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_rank_change_in_dataset": {
+          "name": "lead_rank_change_in_dataset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_g_rank": {
+          "name": "raw_g_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_raw_g_rank": {
+          "name": "previous_raw_g_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_g_rank_change": {
+          "name": "raw_g_rank_change",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_streams": {
+          "name": "lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_lead_streams": {
+          "name": "previous_lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_daily_gain": {
+          "name": "lead_daily_gain",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "non_lead_streams": {
+          "name": "non_lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_non_lead_streams": {
+          "name": "previous_non_lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "non_lead_daily_gain": {
+          "name": "non_lead_daily_gain",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_credit_streams": {
+          "name": "all_credit_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_all_credit_streams": {
+          "name": "previous_all_credit_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_credit_daily_gain": {
+          "name": "all_credit_daily_gain",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "artist_stream_current_ranked_idx": {
+          "name": "artist_stream_current_ranked_idx",
+          "columns": [
+            {
+              "expression": "currently_ranked",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "all_credit_rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artist_stream_current_all_credit_streams_idx": {
+          "name": "artist_stream_current_all_credit_streams_idx",
+          "columns": [
+            {
+              "expression": "all_credit_streams",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artist_stream_current_lead_streams_idx": {
+          "name": "artist_stream_current_lead_streams_idx",
+          "columns": [
+            {
+              "expression": "lead_streams",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "artist_stream_current_artist_id_artists_id_fk": {
+          "name": "artist_stream_current_artist_id_artists_id_fk",
+          "tableFrom": "artist_stream_current",
+          "tableTo": "artists",
+          "columnsFrom": [
+            "artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "artist_stream_current_latest_snapshot_id_artist_stream_snapshots_id_fk": {
+          "name": "artist_stream_current_latest_snapshot_id_artist_stream_snapshots_id_fk",
+          "tableFrom": "artist_stream_current",
+          "tableTo": "artist_stream_snapshots",
+          "columnsFrom": [
+            "latest_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.artist_stream_snapshots": {
+      "name": "artist_stream_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "import_run_id": {
+          "name": "import_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artist_id": {
+          "name": "artist_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_date": {
+          "name": "source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'chartmasters'"
+        },
+        "source_table": {
+          "name": "source_table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'spotify_artists_all_credits'"
+        },
+        "all_credit_rank": {
+          "name": "all_credit_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_g_rank": {
+          "name": "raw_g_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_rank_in_dataset": {
+          "name": "lead_rank_in_dataset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_streams": {
+          "name": "lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "non_lead_streams": {
+          "name": "non_lead_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "all_credit_streams": {
+          "name": "all_credit_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_artist_name": {
+          "name": "raw_artist_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_artist_url": {
+          "name": "raw_artist_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_image_url": {
+          "name": "raw_image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_data_freshness_label": {
+          "name": "raw_data_freshness_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genre": {
+          "name": "genre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_hash": {
+          "name": "row_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "artist_stream_snapshots_date_rank_idx": {
+          "name": "artist_stream_snapshots_date_rank_idx",
+          "columns": [
+            {
+              "expression": "source_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "all_credit_rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artist_stream_snapshots_artist_date_idx": {
+          "name": "artist_stream_snapshots_artist_date_idx",
+          "columns": [
+            {
+              "expression": "artist_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "artist_stream_snapshots_import_run_id_data_ingestion_runs_id_fk": {
+          "name": "artist_stream_snapshots_import_run_id_data_ingestion_runs_id_fk",
+          "tableFrom": "artist_stream_snapshots",
+          "tableTo": "data_ingestion_runs",
+          "columnsFrom": [
+            "import_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "artist_stream_snapshots_artist_id_artists_id_fk": {
+          "name": "artist_stream_snapshots_artist_id_artists_id_fk",
+          "tableFrom": "artist_stream_snapshots",
+          "tableTo": "artists",
+          "columnsFrom": [
+            "artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "artist_stream_snapshots_artist_date_table_unique": {
+          "name": "artist_stream_snapshots_artist_date_table_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "artist_id",
+            "source_date",
+            "source_table"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.artist_top1000_periods": {
+      "name": "artist_top1000_periods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "artist_id": {
+          "name": "artist_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entered_on": {
+          "name": "entered_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exited_on": {
+          "name": "exited_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entry_all_credit_rank": {
+          "name": "entry_all_credit_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exit_all_credit_rank": {
+          "name": "exit_all_credit_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_open": {
+          "name": "is_open",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "artist_top1000_periods_artist_open_idx": {
+          "name": "artist_top1000_periods_artist_open_idx",
+          "columns": [
+            {
+              "expression": "artist_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_open",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "artist_top1000_periods_artist_id_artists_id_fk": {
+          "name": "artist_top1000_periods_artist_id_artists_id_fk",
+          "tableFrom": "artist_top1000_periods",
+          "tableTo": "artists",
+          "columnsFrom": [
+            "artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.artists": {
+      "name": "artists",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "spotify_artist_id": {
+          "name": "spotify_artist_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chartmasters_artist_key": {
+          "name": "chartmasters_artist_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chartmasters_name": {
+          "name": "chartmasters_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chartmasters_url": {
+          "name": "chartmasters_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_hash": {
+          "name": "image_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genre": {
+          "name": "genre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_disabled": {
+          "name": "is_disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "metadata_checked_at": {
+          "name": "metadata_checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata_updated_at": {
+          "name": "metadata_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "artists_normalized_name_idx": {
+          "name": "artists_normalized_name_idx",
+          "columns": [
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "artists_spotify_artist_id_unique": {
+          "name": "artists_spotify_artist_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "spotify_artist_id"
+          ]
+        },
+        "artists_chartmasters_artist_key_unique": {
+          "name": "artists_chartmasters_artist_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "chartmasters_artist_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.data_ingestion_runs": {
+      "name": "data_ingestion_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_table": {
+          "name": "source_table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_date": {
+          "name": "source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collection_method": {
+          "name": "collection_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rows_found": {
+          "name": "rows_found",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rows_inserted": {
+          "name": "rows_inserted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rows_updated": {
+          "name": "rows_updated",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rows_dropped_out": {
+          "name": "rows_dropped_out",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rows_reentered": {
+          "name": "rows_reentered",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "anomalies_count": {
+          "name": "anomalies_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.game_rounds": {
+      "name": "game_rounds",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round_number": {
+          "name": "round_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "left_artist_id": {
+          "name": "left_artist_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "right_artist_id": {
+          "name": "right_artist_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "left_streams": {
+          "name": "left_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "right_streams": {
+          "name": "right_streams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "left_rank": {
+          "name": "left_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "right_rank": {
+          "name": "right_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "player_guess": {
+          "name": "player_guess",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_correct": {
+          "name": "is_correct",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stream_gap": {
+          "name": "stream_gap",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_source_date": {
+          "name": "dataset_source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "answered_at": {
+          "name": "answered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "game_rounds_session_id_game_sessions_id_fk": {
+          "name": "game_rounds_session_id_game_sessions_id_fk",
+          "tableFrom": "game_rounds",
+          "tableTo": "game_sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "game_rounds_left_artist_id_artists_id_fk": {
+          "name": "game_rounds_left_artist_id_artists_id_fk",
+          "tableFrom": "game_rounds",
+          "tableTo": "artists",
+          "columnsFrom": [
+            "left_artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "game_rounds_right_artist_id_artists_id_fk": {
+          "name": "game_rounds_right_artist_id_artists_id_fk",
+          "tableFrom": "game_rounds",
+          "tableTo": "artists",
+          "columnsFrom": [
+            "right_artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.game_sessions": {
+      "name": "game_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_source_date": {
+          "name": "dataset_source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_source_table": {
+          "name": "dataset_source_table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'spotify_artists_all_credits'"
+        },
+        "anonymous_id": {
+          "name": "anonymous_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "streak": {
+          "name": "streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "max_streak": {
+          "name": "max_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ingestion_anomalies": {
+      "name": "ingestion_anomalies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "import_run_id": {
+          "name": "import_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_number": {
+          "name": "row_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "artist_name": {
+          "name": "artist_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_value": {
+          "name": "raw_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ingestion_anomalies_import_run_id_data_ingestion_runs_id_fk": {
+          "name": "ingestion_anomalies_import_run_id_data_ingestion_runs_id_fk",
+          "tableFrom": "ingestion_anomalies",
+          "tableTo": "data_ingestion_runs",
+          "columnsFrom": [
+            "import_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.leaderboard_entries": {
+      "name": "leaderboard_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "player_name": {
+          "name": "player_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "anonymous_id": {
+          "name": "anonymous_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rounds_played": {
+          "name": "rounds_played",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_source_date": {
+          "name": "dataset_source_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "leaderboard_entries_session_id_game_sessions_id_fk": {
+          "name": "leaderboard_entries_session_id_game_sessions_id_fk",
+          "tableFrom": "leaderboard_entries",
+          "tableTo": "game_sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

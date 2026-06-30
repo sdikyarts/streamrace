@@ -1,0 +1,26 @@
+name: Security Scan
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap-baseline-staging:
+    name: zap-baseline-staging
+    if: |
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.ref == 'staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Run ZAP baseline scan
+        uses: zaproxy/action-baseline@7c4deb10e6261301961c86d65d54a516394f9aed # v0.14.0
+        with:
+          target: ${{ github.event.deployment_status.target_url }}
+          issue_title: ZAP Baseline Report (staging)
+          fail_action: false
