@@ -5,7 +5,9 @@
   "scripts": {
     "predev": "node scripts/setup-next-dev-cache.mjs",
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/smart-build.mjs",
+    "build:dev": "next build --debug-prerender",
+    "build:prod": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",

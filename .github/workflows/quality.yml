@@ -90,7 +90,12 @@ jobs:
         run: npm run typecheck
 
       - name: Build
-        run: npm run build
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            npm run build:prod
+          else
+            npm run build:dev
+          fi
 
   audit:
     name: audit
