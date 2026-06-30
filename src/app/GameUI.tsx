@@ -99,7 +99,7 @@ function ChevronDown() {
   )
 }
 
-const rng = () => globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
+const rng = () => Math.random()
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
