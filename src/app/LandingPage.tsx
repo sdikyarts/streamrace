@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import ArtistSlideshow from './ArtistSlideshow'
 
-export default function LandingPage({ initialArtists = [] }: { initialArtists?: { url: string; name: string }[] }) {
+export default function LandingPage({ initialArtists = [] }: Readonly<{ initialArtists?: { url: string; name: string }[] }>) {
   const [expanded, setExpanded] = useState(false)
   const [btnHovered, setBtnHovered] = useState(false)
   const [creditsHovered, setCreditsHovered] = useState(false)
