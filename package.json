@@ -14,10 +14,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "import:chartmasters:file": "tsx scripts/import-chartmasters-file.ts",
+    "import:source:file": "tsx scripts/import-source-file.ts",
     "enrich:spotify": "tsx scripts/enrich-artists-spotify.ts",
     "enrich:musicbrainz": "tsx scripts/enrich-artists-musicbrainz.ts",
-    "scrape:chartmasters": "tsx scripts/scrape-chartmasters.ts"
+    "scrape:source": "tsx scripts/scrape-source.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
