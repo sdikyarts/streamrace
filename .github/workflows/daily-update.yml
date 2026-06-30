@@ -32,8 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Scrape chartmasters & import streams
-        run: npm run scrape:chartmasters
+      - name: Scrape & import streams
+        run: npm run scrape:source
         env:
           APP_ENV: ${{ matrix.app_env }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

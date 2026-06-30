@@ -14,12 +14,12 @@ on:
         required: true
         type: choice
         options:
-          - scrape:chartmasters
-          - import:chartmasters:file
+          - scrape:source
+          - import:source:file
           - enrich:spotify
           - enrich:musicbrainz
       source_date:
-        description: 'Source date (YYYY-MM-DD) — import:chartmasters:file only, defaults to today'
+        description: 'Source date (YYYY-MM-DD) — import:source:file only, defaults to today'
         required: false
         type: string
 
@@ -54,8 +54,8 @@ jobs:
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SOURCE_DATE: ${{ inputs.source_date }}
         run: |
-          if [ "${{ inputs.script }}" = "import:chartmasters:file" ] && [ -n "$SOURCE_DATE" ]; then
-            npm run import:chartmasters:file -- "$SOURCE_DATE"
+          if [ "${{ inputs.script }}" = "import:source:file" ] && [ -n "$SOURCE_DATE" ]; then
+            npm run import:source:file -- "$SOURCE_DATE"
           else
             npm run ${{ inputs.script }}
           fi

@@ -338,8 +338,12 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
 
     // Pan starts just above the top of the head, ends at face/subject center
     const aboveHead = Math.max(0, focal.topY - HEAD_MARGIN)
-    let { x: startX, y: startY } = focalToBgPos({ x: focal.x, y: aboveHead }, el)
-    let { x: endX, y: endY } = focalToBgPos(focal, el)
+    const startPos = focalToBgPos({ x: focal.x, y: aboveHead }, el)
+    const startX = startPos.x
+    let startY = startPos.y
+    const endPos = focalToBgPos(focal, el)
+    const endX = endPos.x
+    let endY = endPos.y
 
     // When the focal point is in the upper quarter of the image, focalToBgPos
     // clamps both start and end to 0% — no visible movement. Fall back to a

@@ -72,6 +72,20 @@ describe("getDatabaseInfo", () => {
       pooled: false,
     });
   });
+
+  it("returns null for an empty database name when the URL path is bare slash", () => {
+    expect(
+      getDatabaseInfo(
+        "postgresql://user:pass@test-development-pooler.invalid/",
+        testEndpointBranches,
+      ),
+    ).toMatchObject({
+      configured: true,
+      selected: "development",
+      databaseName: null,
+      pooled: true,
+    });
+  });
 });
 
 describe("getExpectedDatabaseBranch", () => {

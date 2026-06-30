@@ -1,0 +1,157 @@
+#wpf-reaction-list-wrap{
+    display: block;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list{
+    width: 100%;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row {
+    padding: 10px 10px 0px 0px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row .wpf-reaction-icon img{
+    cursor: default !important;
+    font-size: 18px;
+}
+
+[dir=rtl] #wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row{
+    direction: rtl !important;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row:last-of-type{
+    border-bottom: none;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > * {
+    margin: 0 3px;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > .wpf-reaction-list-avatar{
+    margin: 0 8px;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > .wpf-reaction-list-avatar img{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: #e6e6e6 1px solid;
+    padding: 3px;
+}
+
+.wpf-dark #wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > .wpf-reaction-list-avatar img{
+    background: #141414;
+    border: #727272 1px solid;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row.wpfm-focus > .wpf-reaction-list-dname{
+    color: #FFFFFF !important;
+}
+
+.wpf-dark #wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row.wpfm-focus,
+.wpf-dark #wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row.wpfm-focus .wpf-reaction-list-dname{
+    color: #E0E0E0;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > .wpf-reaction-list-isonline{
+    display: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: #0d9b7f;
+    margin: 0 3px;
+}
+
+#wpf-reaction-list-wrap #wpf-reaction-list > li.wpf-reaction-list-row > .wpf-reaction-list-isonline.wpf-member-is-online {
+    display: inline-block;
+}
+
+.mce-ico.mce-i-fa-solid.fa-at{
+    font-weight: bold !important;
+    line-height: 0.7 !important;
+}
+
+.mce-ico.mce-i-fa-solid.fa-at::before{
+    content: "\40" !important;
+}
+
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs{
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
+}
+
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs > li{
+    padding: 3px;
+    margin: 0 5px;
+    font-size: 18px;
+    cursor: pointer;
+    border-bottom: 3px solid #ddd;
+    list-style: none;
+    color: #777;
+}
+
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs > li img{
+    width: 25px;
+    height: 25px;
+}
+
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs > li *{
+    pointer-events: none;
+}
+
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs > li.wpf-reaction-tab-active,
+#wpf-reaction-tabs-wrap > ul#wpf-reaction-tabs > li:hover{
+    border-color: #0A75B5;
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap{
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    border-left: 3px solid #ddd;
+    border-right: 3px solid #ddd;
+    border-radius: 15px;
+    padding: 0 8px;
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt{
+    font-size: 20px;
+    cursor: pointer;
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt *{
+    pointer-events: none;
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt:not(.wpf-recexc-all){
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform .2s;
+    position: relative;
+    margin-left: -1.1%;
+}
+
+.wpf-dark #wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt:not(.wpf-recexc-all){
+
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt:not(.wpf-recexc-all):hover{
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+#wpforo #wpforo-wrap .wpf-reaction-excerpt-wrap > .wpf-reaction-excerpt.wpf-recexc-all{
+    margin-left: 4px;
+    font-size: 16px;
+    color: #666;
+    vertical-align: middle;
+}
