@@ -359,7 +359,7 @@ describe("GameUI", () => {
 
   it("uses empty array when initialArtists prop is omitted (covers ?? [] branch)", async () => {
     // No initialArtists prop → seedArtists(undefined ?? []) → seeds with empty []
-    render(createElement(GameUI, { mode: "all-credits" } as any));
+    render(createElement(GameUI, { mode: "all-credits" }));
 
     await waitFor(
       () => expect(screen.queryByText("Loading...")).toBeNull(),
@@ -370,7 +370,7 @@ describe("GameUI", () => {
   it("covers the cancelled check when fetch resolves after unmount", async () => {
     // Use a deferred Promise so the fetch resolves AFTER the component unmounts.
     // The .then() at line 529 fires with cancelled=true → early return covers that branch.
-    let resolveFetch!: (v: any) => void;
+    let resolveFetch!: (v: unknown) => void;
     vi.stubGlobal(
       "fetch",
       vi.fn().mockReturnValue(new Promise(resolve => { resolveFetch = resolve; })),

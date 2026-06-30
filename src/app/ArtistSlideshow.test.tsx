@@ -57,7 +57,7 @@ function stubCanvas() {
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
     drawImage: vi.fn(),
     getImageData: vi.fn().mockReturnValue({ data: pixelData }),
-  } as any);
+  } as unknown as CanvasRenderingContext2D);
 }
 
 function stubLocalStorage(cached: string | null = null) {
@@ -286,7 +286,7 @@ describe("ArtistSlideshow", () => {
     // With getContext returning null, scaleToCanvas's `getContext('2d')!.drawImage(...)` throws.
     // preloadAndDetect's try-catch catches it and resolves with DEFAULT_POS (line 261).
     // No FaceDetector stub → detectNativeFace returns null → saliency fallback path runs.
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null as any);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null as unknown as CanvasRenderingContext2D);
 
     expect(() =>
       render(createElement(ArtistSlideshow, { initialArtists: ARTISTS })),

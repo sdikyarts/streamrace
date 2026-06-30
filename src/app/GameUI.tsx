@@ -446,7 +446,7 @@ export default function GameUI({
   initialArtists,
 }: {
   mode: GameMode
-  initialArtists: GameArtist[]
+  initialArtists?: GameArtist[]
 }) {
   const router = useRouter()
 

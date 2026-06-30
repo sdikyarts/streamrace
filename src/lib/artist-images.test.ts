@@ -10,6 +10,7 @@ vi.mock("@/db/client", () => ({
   createDatabaseClient: dbMocks.createDatabaseClient,
 }));
 
+import type { StreamRaceDb } from "@/db/client";
 import { getArtistImages } from "./artist-images";
 
 function makeDb(rows: unknown[]) {
@@ -29,7 +30,7 @@ describe("getArtistImages", () => {
       { imageUrl: "https://example.com/b.jpg", name: "Artist B" },
     ]);
 
-    await expect(getArtistImages(db as any)).resolves.toEqual([
+    await expect(getArtistImages(db as unknown as StreamRaceDb)).resolves.toEqual([
       { url: "https://example.com/a.jpg", name: "Artist A" },
       { url: "https://example.com/b.jpg", name: "Artist B" },
     ]);
@@ -37,7 +38,7 @@ describe("getArtistImages", () => {
 
   it("issues a single select query against the artists table", async () => {
     const db = makeDb([]);
-    await getArtistImages(db as any);
+    await getArtistImages(db as unknown as StreamRaceDb);
     expect(db.select).toHaveBeenCalledOnce();
   });
 });
@@ -45,7 +46,7 @@ describe("getArtistImages", () => {
 describe("getArtistImages default db selection", () => {
   afterEach(() => {
     delete process.env.DATABASE_URL;
-    delete (globalThis as any).streamRaceArtistImageClient;
+    globalThis.streamRaceArtistImageClient = undefined;
     dbMocks.getDb.mockReset();
     dbMocks.createDatabaseClient.mockReset();
   });

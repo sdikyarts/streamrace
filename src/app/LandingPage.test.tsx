@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./ArtistSlideshow", () => ({ default: () => null }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, onMouseEnter, onMouseLeave, style, className }: any) =>
+  default: ({ href, children, onMouseEnter, onMouseLeave, style, className }: ComponentProps<'a'>) =>
     createElement("a", { href, onMouseEnter, onMouseLeave, style, className }, children),
 }));
 
