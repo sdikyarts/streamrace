@@ -99,6 +99,8 @@ function ChevronDown() {
   )
 }
 
+const rng = () => globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
+
 // ── types ─────────────────────────────────────────────────────────────────────
 
 type Phase = 'playing' | 'reveal' | 'transitioning' | 'gameover'
@@ -110,7 +112,7 @@ interface ArtistState {
 
 // ── artist name label ─────────────────────────────────────────────────────────
 
-function ArtistNameLabel({ name }: { name: string }) {
+function ArtistNameLabel({ name }: Readonly<{ name: string }>) {
   return (
     <div
       className="sr-name-box"
@@ -143,7 +145,7 @@ function ArtistNameLabel({ name }: { name: string }) {
 
 // ── stream count display ──────────────────────────────────────────────────────
 
-function StreamCountDisplay({ streams }: { streams: number }) {
+function StreamCountDisplay({ streams }: Readonly<{ streams: number }>) {
   return (
     <div
       className="sr-stream"
@@ -180,7 +182,7 @@ function StreamCountDisplay({ streams }: { streams: number }) {
 
 // ── description text ──────────────────────────────────────────────────────────
 
-function DescText({ children }: { children: React.ReactNode }) {
+function DescText({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <p
       className="sr-desc"
@@ -210,13 +212,13 @@ function GuessButton({
   gradient,
   onClick,
   disabled,
-}: {
+}: Readonly<{
   label: string
   icon: React.ReactNode
   gradient: string
   onClick: () => void
   disabled: boolean
-}) {
+}>) {
   return (
     <button
       onClick={onClick}
@@ -259,12 +261,12 @@ function ScoreBox({
   value,
   corner,
   bg,
-}: {
+}: Readonly<{
   label: string
   value: number
   corner: 'top-right' | 'top-left'
   bg: string
-}) {
+}>) {
   const isRight = corner === 'top-right'
   const rowBase: React.CSSProperties = {
     backgroundColor: bg,
@@ -298,7 +300,7 @@ function ScoreBox({
 
 // ── result circle ─────────────────────────────────────────────────────────────
 
-function ResultCircle({ correct, visible }: { correct: boolean; visible: boolean }) {
+function ResultCircle({ correct, visible }: Readonly<{ correct: boolean; visible: boolean }>) {
   return (
     <div
       style={{
@@ -353,7 +355,7 @@ function ArtistPanel({
   artist1Name,
   onGuess,
   disabled,
-}: {
+}: Readonly<{
   artist: GameArtist
   showStreams: boolean
   isRight: boolean
@@ -361,7 +363,7 @@ function ArtistPanel({
   artist1Name?: string
   onGuess?: (g: 'higher' | 'lower') => void
   disabled: boolean
-}) {
+}>) {
   const abs: React.CSSProperties = { position: 'absolute', inset: 0 }
 
   return (
@@ -450,7 +452,6 @@ export default function GameUI({
 }>) {
   const router = useRouter()
 
-  const [pool, setPool] = useState<GameArtist[]>([])
   const [left, setLeft] = useState<ArtistState | null>(null)
   const [right, setRight] = useState<ArtistState | null>(null)
   const [score, setScore] = useState(0)
@@ -477,10 +478,10 @@ export default function GameUI({
       if (available.length === 0) return sorted[0]
 
       const anchorIdx = sorted.findIndex(a => a.name === anchor.name)
-      if (anchorIdx === -1) return available[Math.floor(Math.random() * available.length)]
+      if (anchorIdx === -1) return available[Math.floor(rng() * available.length)]
 
       // 20% wild card — picks from anywhere so all 1000 artists can appear over a session
-      if (Math.random() < 0.2) return available[Math.floor(Math.random() * available.length)]
+      if (rng() < 0.2) return available[Math.floor(rng() * available.length)]
 
       // 150 ranks wide at score 0, narrows by 5 per point, floors at 20
       const windowSize = Math.max(20, 150 - currentScore * 5)
@@ -488,7 +489,7 @@ export default function GameUI({
       const hi = Math.min(sorted.length - 1, anchorIdx + windowSize)
       const candidates = sorted.slice(lo, hi + 1).filter(a => !excludedNames.has(a.name))
       const from = candidates.length > 0 ? candidates : available
-      return from[Math.floor(Math.random() * from.length)]
+      return from[Math.floor(rng() * from.length)]
     },
     [],
   )
@@ -496,16 +497,15 @@ export default function GameUI({
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 90_000)
+    const timeoutId = globalThis.setTimeout(() => controller.abort(), 90_000)
 
     const seedArtists = (artists: GameArtist[]) => {
       const valid = artists.filter(a => a.streams > 0)
       const sorted = [...valid].sort((a, b) => b.streams - a.streams)
       sortedPool.current = sorted
-      setPool(valid)
       if (sorted.length >= 2) {
         // Left artist: random from the full pool (any tier)
-        const leftArtist = sorted[Math.floor(Math.random() * sorted.length)]
+        const leftArtist = sorted[Math.floor(rng() * sorted.length)]
         // Right artist: always near the left by rank, so the comparison is genuinely uncertain
         const rightArtist = pickNear(leftArtist, [leftArtist], 0)
         setLeft({ artist: leftArtist, key: nextKey() })
@@ -517,7 +517,7 @@ export default function GameUI({
       if (cancelled) return
       setLoadError(null)
       seedArtists(initialArtists ?? [])
-      setHighScore(parseInt(localStorage.getItem(HS_KEY(mode)) ?? '0', 10))
+      setHighScore(Number.parseInt(localStorage.getItem(HS_KEY(mode)) ?? '0', 10))
     })
 
     fetch(`/api/game-artists/${mode}`, { signal: controller.signal })
@@ -530,9 +530,8 @@ export default function GameUI({
         const v = fetched.filter((a: GameArtist) => a.streams > 0)
         const sorted = [...v].sort((a, b) => b.streams - a.streams)
         sortedPool.current = sorted
-        setPool(v)
         if (sorted.length >= 2) {
-          const leftArtist = sorted[Math.floor(Math.random() * sorted.length)]
+          const leftArtist = sorted[Math.floor(rng() * sorted.length)]
           const rightArtist = pickNear(leftArtist, [leftArtist], 0)
           setLeft({ artist: leftArtist, key: nextKey() })
           setRight({ artist: rightArtist, key: nextKey() })
@@ -545,11 +544,11 @@ export default function GameUI({
         console.error('[GameUI] Failed to fetch artists:', err)
         setLoadError('Failed to load artists. Check server logs.')
       })
-      .finally(() => window.clearTimeout(timeoutId))
+      .finally(() => globalThis.clearTimeout(timeoutId))
 
     return () => {
       cancelled = true
-      window.clearTimeout(timeoutId)
+      globalThis.clearTimeout(timeoutId)
       controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

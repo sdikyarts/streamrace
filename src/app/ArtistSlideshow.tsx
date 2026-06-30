@@ -38,10 +38,12 @@ const FADE_DURATION = 1800
 // Small gap above the top of the head before the pan starts (% of image height)
 const HEAD_MARGIN = 3
 
+const rng = () => globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(rng() * (i + 1))
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
@@ -93,9 +95,8 @@ type NativeFaceDetector = {
 }
 
 declare global {
-  interface Window {
-    FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector
-  }
+  // eslint-disable-next-line no-var
+  var FaceDetector: ((new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector) | undefined)
 }
 
 function scaleToCanvas(img: HTMLImageElement, scale: number): HTMLCanvasElement {
@@ -107,10 +108,10 @@ function scaleToCanvas(img: HTMLImageElement, scale: number): HTMLCanvasElement 
 }
 
 async function detectNativeFace(img: HTMLImageElement): Promise<FacePos | null> {
-  if (!window.FaceDetector) return null
+  if (!globalThis.FaceDetector) return null
 
   try {
-    const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 })
+    const detector = new globalThis.FaceDetector({ fastMode: true, maxDetectedFaces: 5 })
     const faces = await detector.detect(img)
     if (!faces.length) return null
 
@@ -286,7 +287,7 @@ function saveCachedArtists(data: { url: string; name: string }[]) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function ArtistSlideshow({ initialArtists }: { initialArtists?: { url: string; name: string }[] }) {
+export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialArtists?: { url: string; name: string }[] }>) {
   const [ready, setReady] = useState(false)
 
   const deckRef = useRef<string[]>([])
@@ -397,7 +398,7 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
     let started = false
     let cancelled = false
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 10_000)
+    const timeoutId = globalThis.setTimeout(() => controller.abort(), 10_000)
 
     async function init(data: { url: string; name: string }[]) {
       if (started || !data.length) return
@@ -446,12 +447,12 @@ export default function ArtistSlideshow({ initialArtists }: { initialArtists?: {
         // Keep the static hero usable even if the slideshow API is unavailable.
       })
       .finally(() => {
-        window.clearTimeout(timeoutId)
+        globalThis.clearTimeout(timeoutId)
       })
 
     return () => {
       cancelled = true
-      window.clearTimeout(timeoutId)
+      globalThis.clearTimeout(timeoutId)
       controller.abort()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

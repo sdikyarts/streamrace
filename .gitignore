@@ -56,6 +56,5 @@ AGENTS.md
 .copilot/
 .github/copilot-instructions.md
 
-# scraped reference pages (contain third-party secrets/assets)
-docs/streams-data/all_credits_page.html
-docs/streams-data/all_credits_page_files/
+# scraped reference data (large third-party content)
+docs/streams-data/

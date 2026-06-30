@@ -17,6 +17,18 @@ vi.mock("next/image", () => ({
 import GameUI from "./GameUI";
 import type { GameArtist } from "@/lib/game-artists";
 
+// Stubs globalThis.crypto.getRandomValues so rng() returns a deterministic sequence.
+// Pass values in call order; the last value repeats for all subsequent calls.
+function stubRng(...sequence: number[]) {
+  const last = sequence.at(-1) ?? 0;
+  let i = 0;
+  vi.spyOn(globalThis.crypto, 'getRandomValues').mockImplementation((arr) => {
+    const val = i < sequence.length ? sequence[i++] : last;
+    if (arr instanceof Uint32Array) arr[0] = (val * 2 ** 32) >>> 0;
+    return arr;
+  });
+}
+
 // Three artists so pickNear always has a non-excluded candidate for the second round
 const artistA: GameArtist = { name: "Artist Alpha", imageUrl: "https://example.com/a.jpg", streams: 1_000_000 };
 const artistB: GameArtist = { name: "Artist Beta",  imageUrl: "https://example.com/b.jpg", streams: 500_000  };
@@ -59,7 +71,7 @@ describe("GameUI", () => {
   it("renders both artist panels once initialArtists are seeded", async () => {
     // Math.random = 0 → sorted=[artistA(1M),artistC(750k),artistB(500k)]
     // left=artistA, right=artistC (wildcard); same after the fetch re-seed
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, { mode: "all-credits", initialArtists: [artistA, artistB, artistC] }),
@@ -76,7 +88,7 @@ describe("GameUI", () => {
   it("shows the left artist stream count once seeded", async () => {
     // Math.random = 0 → sorted=[artistA(1M),artistC(750k),artistB(500k)]
     // leftArtist = sorted[0] = artistA, right = artistC (wildcard pick)
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, {
@@ -104,7 +116,7 @@ describe("GameUI", () => {
 
   it("increments score on a correct guess (left has more streams)", async () => {
     // Math.random = 0 → left=artistA(1M), right=artistC(750k) → correct = Lower
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, {
@@ -126,7 +138,7 @@ describe("GameUI", () => {
   it("fires the next-round transition after a correct guess (left > right path)", async () => {
     // left=artistA(1M) > right=artistC(750k) → Lower is correct
     // After 1600ms: leftStreams>rightStreams → setRight(next); after 300ms: phase='playing'
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, {
@@ -164,9 +176,7 @@ describe("GameUI", () => {
     //   right = wildcard (random=0) from available=[artistA,artistC] → artistA(1M)
     //   correct = Higher (1M > 500k)
     // After 1600ms: leftStreams<rightStreams → else branch: setLeft(right), setRight(next)
-    vi.spyOn(Math, "random")
-      .mockReturnValueOnce(0.8) // leftArtist = sorted[2] = artistB
-      .mockReturnValue(0);      // everything else
+    stubRng(0.8, 0); // first call picks leftArtist = sorted[2] = artistB, rest = 0
 
     render(
       createElement(GameUI, {
@@ -193,7 +203,7 @@ describe("GameUI", () => {
 
   it("shows GAME OVER overlay on a wrong guess and navigates home on BACK TO HOME", async () => {
     // left=artistA(1M), right=artistC(750k) → "Higher" is wrong (750k not > 1M)
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, {
@@ -226,7 +236,7 @@ describe("GameUI", () => {
     // With only 2 artists in the pool, after a correct guess exclude=[left,right] exhausts
     // the full pool → pickNear sees available.length===0 → returns sorted[0] (line 477).
     setupFetch([artistA, artistB]);
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, { mode: "all-credits", initialArtists: [artistA, artistB] }),
@@ -252,7 +262,7 @@ describe("GameUI", () => {
   it("ignores a second click while already in reveal phase (covers handleGuess early-return)", async () => {
     // After the first click, phase becomes 'reveal'. A second click hits the
     // `if (phase !== 'playing' || ...) return` guard (line 559) and returns early.
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, { mode: "all-credits", initialArtists: [artistA, artistB, artistC] }),
@@ -280,7 +290,7 @@ describe("GameUI", () => {
       clear: vi.fn(),
     });
 
-    vi.spyOn(Math, "random").mockReturnValue(0);
+    stubRng(0);
 
     render(
       createElement(GameUI, { mode: "all-credits", initialArtists: [artistA, artistB, artistC] }),
