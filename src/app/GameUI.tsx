@@ -79,15 +79,6 @@ const GAME_STYLES = `
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
 const HS_KEY = (mode: GameMode) => `sr:hs:${mode}`
 
 // ── chevron icons ─────────────────────────────────────────────────────────────
@@ -181,7 +172,7 @@ function StreamCountDisplay({ streams }: { streams: number }) {
           top: '0.08em',
         }}
       >
-        {streams.toLocaleString()}
+        {streams.toLocaleString('en-US')}
       </div>
     </div>
   )
@@ -299,7 +290,7 @@ function ScoreBox({
         {label}
       </div>
       <div style={{ ...rowBase, fontSize: 'clamp(14px, 1.65vw, 28px)', lineHeight: 1.15, padding: '0.25vh 0.6vw', marginTop: '-1px' }}>
-        {value.toLocaleString()}
+        {value.toLocaleString('en-US')}
       </div>
     </div>
   )
@@ -763,7 +754,7 @@ export default function GameUI({
                   top: '0.08em',
                 }}
               >
-                {score.toLocaleString()}
+                {score.toLocaleString('en-US')}
               </div>
             </div>
 
@@ -786,7 +777,7 @@ export default function GameUI({
                 whiteSpace: 'nowrap',
               }}
             >
-              High Score: {highScore.toLocaleString()}
+              High Score: {highScore.toLocaleString('en-US')}
             </div>
           </div>
 
