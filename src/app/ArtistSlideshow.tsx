@@ -95,9 +95,8 @@ type NativeFaceDetector = {
 }
 
 declare global {
-  interface Window {
-    FaceDetector?: new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector
-  }
+  // eslint-disable-next-line no-var
+  var FaceDetector: ((new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector) | undefined)
 }
 
 function scaleToCanvas(img: HTMLImageElement, scale: number): HTMLCanvasElement {
