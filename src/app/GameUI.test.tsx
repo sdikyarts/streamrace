@@ -393,5 +393,7 @@ describe("GameUI", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

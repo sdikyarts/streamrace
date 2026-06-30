@@ -444,10 +444,10 @@ function ArtistPanel({
 export default function GameUI({
   mode,
   initialArtists,
-}: {
+}: Readonly<{
   mode: GameMode
   initialArtists?: GameArtist[]
-}) {
+}>) {
   const router = useRouter()
 
   const [pool, setPool] = useState<GameArtist[]>([])

@@ -116,7 +116,7 @@ describe("ArtistSlideshow", () => {
   it("advances through two full slide cycles (covers both outgoing=0 and outgoing=1 branches)", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: false });
 
-    render(createElement(ArtistSlideshow, { initialArtists: ARTISTS }));
+    const { container } = render(createElement(ArtistSlideshow, { initialArtists: ARTISTS }));
 
     await act(async () => {
       await Promise.resolve();
@@ -130,6 +130,8 @@ describe("ArtistSlideshow", () => {
     // Cycle 2: outgoing=1, incoming=0  (line 463 false branch)
     await act(async () => { vi.advanceTimersByTime(7001); });
     await act(async () => { vi.advanceTimersByTime(1801); });
+
+    expect(container.querySelectorAll("img").length).toBeGreaterThanOrEqual(2);
   });
 
   it("handles a single-artist list (covers second===first branch in init)", async () => {
@@ -137,13 +139,14 @@ describe("ArtistSlideshow", () => {
     const ONE = [ARTISTS[0]];
     vi.useFakeTimers({ shouldAdvanceTime: false });
 
-    render(createElement(ArtistSlideshow, { initialArtists: ONE }));
+    const { container } = render(createElement(ArtistSlideshow, { initialArtists: ONE }));
 
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
 
+    expect(container.querySelectorAll("img").length).toBeGreaterThanOrEqual(2);
     vi.useRealTimers();
   });
 
@@ -172,6 +175,7 @@ describe("ArtistSlideshow", () => {
     // Fire the slide interval → startPan with top-left face → fallback triggers
     await act(async () => { vi.advanceTimersByTime(7001); });
 
+    expect(mockDetect).toHaveBeenCalled();
     vi.useRealTimers();
   });
 
@@ -195,6 +199,7 @@ describe("ArtistSlideshow", () => {
 
     // Dispatch a transitionend event with propertyName='width' to invoke clearWidthTransition
     const nameWrap = container.querySelector(".artist-label-wrap") as HTMLElement | null;
+    expect(nameWrap).not.toBeNull();
     if (nameWrap) {
       const event = Object.assign(new Event("transitionend", { bubbles: false }), {
         propertyName: "width",
@@ -211,7 +216,7 @@ describe("ArtistSlideshow", () => {
     const TWO = ARTISTS.slice(0, 2);
     vi.useFakeTimers({ shouldAdvanceTime: false });
 
-    render(createElement(ArtistSlideshow, { initialArtists: TWO }));
+    const { container } = render(createElement(ArtistSlideshow, { initialArtists: TWO }));
 
     await act(async () => {
       await Promise.resolve();
@@ -220,7 +225,8 @@ describe("ArtistSlideshow", () => {
 
     await act(async () => { vi.advanceTimersByTime(7001); });
     await act(async () => { vi.advanceTimersByTime(1801); });
-    // No assertion — just confirming the shuffle path runs without crashing
+
+    expect(container.querySelectorAll("img").length).toBeGreaterThanOrEqual(2);
   });
 
   it("uses window.FaceDetector when available and faces are found", async () => {
