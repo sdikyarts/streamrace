@@ -480,15 +480,25 @@ export default function GameUI({
       const anchorIdx = sorted.findIndex(a => a.name === anchor.name)
       if (anchorIdx === -1) return available[Math.floor(rng() * available.length)]
 
-      // 20% wild card — picks from anywhere so all 1000 artists can appear over a session
-      if (rng() < 0.2) return available[Math.floor(rng() * available.length)]
+      // 10% wild card — picks from anywhere so all 1000 artists can appear over a session
+      if (rng() < 0.1) return available[Math.floor(rng() * available.length)]
 
-      // 150 ranks wide at score 0, narrows by 5 per point, floors at 20
-      const windowSize = Math.max(20, 150 - currentScore * 5)
+      // 150 ranks wide at score 0, narrows by 3 per point, floors at 40
+      const windowSize = Math.max(40, 150 - currentScore * 3)
       const lo = Math.max(0, anchorIdx - windowSize)
       const hi = Math.min(sorted.length - 1, anchorIdx + windowSize)
-      const candidates = sorted.slice(lo, hi + 1).filter(a => !excludedNames.has(a.name))
-      const from = candidates.length > 0 ? candidates : available
+      const inWindow = sorted.slice(lo, hi + 1).filter(a => !excludedNames.has(a.name))
+
+      // Guarantee a meaningful stream count gap at low scores.
+      // minRatio starts at 30% and shrinks by 1% per point, flooring at 5%.
+      const minRatio = Math.max(0.05, 0.30 - currentScore * 0.01)
+      const candidates = inWindow.filter(a => {
+        const ratio = Math.abs(a.streams - anchor.streams) / Math.max(a.streams, anchor.streams)
+        return ratio >= minRatio
+      })
+
+      // Relax ratio constraint if no candidates survive, then fall back to all available
+      const from = candidates.length > 0 ? candidates : inWindow.length > 0 ? inWindow : available
       return from[Math.floor(rng() * from.length)]
     },
     [],

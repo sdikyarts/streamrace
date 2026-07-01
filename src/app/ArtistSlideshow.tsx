@@ -258,15 +258,36 @@ function clearWidthTransition(e: Event) {
 function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: string) {
   if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
 
-  // On touch devices skip the width morph — just cross-fade the text
+  // On touch devices skip the width morph — cross-fade the text.
+  // We must also suppress the wrap's transform transition during the swap;
+  // otherwise the translateX(-50%) centering animates when the container
+  // resizes, causing a visible lateral slide while the text is invisible.
   if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
-    text.style.transition = 'opacity 0.15s ease'
+    wrap.removeEventListener('transitionend', clearWidthTransition)
+    pendingNameSwap = null
+    wrap.style.width = ''
+    wrap.style.overflow = ''
+
+    text.style.transition = 'opacity 0.18s ease'
     text.style.opacity = '0'
+
     widthFallbackTimer = setTimeout(() => {
       widthFallbackTimer = null
+      // Disable wrap transitions so the width change doesn't animate translateX
+      wrap.style.transition = 'none'
       text.textContent = name
-      text.style.opacity = '1'
-    }, 150)
+      void wrap.getBoundingClientRect()  // commit new layout instantly
+      wrap.style.transition = ''         // restore CSS transitions
+
+      requestAnimationFrame(() => {
+        text.style.opacity = '1'
+        // Clean up the inline transition after fade-in so gradient hover works
+        widthFallbackTimer = setTimeout(() => {
+          widthFallbackTimer = null
+          text.style.transition = ''
+        }, 220)
+      })
+    }, 210)
     return
   }
 

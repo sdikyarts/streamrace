@@ -5,6 +5,25 @@ import { useEffect, useRef, useState } from 'react'
 
 import ArtistSlideshow from './ArtistSlideshow'
 
+function applyTapStart(el: HTMLElement, bgPos: string) {
+  el.style.setProperty('transition', 'none')
+  void el.getBoundingClientRect()
+  el.style.setProperty('background-position', bgPos)
+  el.style.setProperty('transform', 'scale(1.06)')
+}
+
+function applyTapEnd(el: HTMLElement) {
+  el.style.setProperty('transition', 'background-position 0.5s ease, transform 0.2s ease')
+  void el.getBoundingClientRect()
+  el.style.removeProperty('background-position')
+  el.style.removeProperty('transform')
+}
+
+function applyTapCancel(el: HTMLElement) {
+  el.style.removeProperty('transition')
+  el.style.removeProperty('background-position')
+  el.style.removeProperty('transform')
+}
 
 export default function LandingPage({ initialArtists = [] }: Readonly<{ initialArtists?: { url: string; name: string }[] }>) {
   const [expanded, setExpanded] = useState(false)
@@ -118,24 +137,6 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             text-align: center !important;
           }
         }
-        @media (hover: none) {
-          .zoom-el:active {
-            transform: scale(1.06) !important;
-            transition: transform 0.05s ease !important;
-          }
-          .start-btn:active {
-            background-position: 100% 0% !important;
-            transition: background-position 0.1s ease !important;
-          }
-          .credits-link:active {
-            background-position: 65% 0% !important;
-            transition: background-position 0.1s ease !important;
-          }
-          .leads-link:active {
-            background-position: 65% 0% !important;
-            transition: background-position 0.1s ease !important;
-          }
-        }
       `}</style>
 
       <div
@@ -170,6 +171,9 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
         <div className="flex flex-col" style={{ marginTop: '1.75vh', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.14s backwards' }}>
           <button
             onClick={() => setExpanded(v => !v)}
+            onTouchStart={(e) => applyTapStart(e.currentTarget, '100% 0%')}
+            onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
+            onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
             className="start-btn flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
             style={{
               fontSize: 'clamp(13px, 1.5vw, 25px)',
@@ -208,6 +212,9 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             <Link
               href="/all-credits"
               className="credits-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              onTouchStart={(e) => applyTapStart(e.currentTarget, '65% 0%')}
+              onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
+              onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',
@@ -223,6 +230,9 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             <Link
               href="/lead-streams"
               className="leads-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              onTouchStart={(e) => applyTapStart(e.currentTarget, '65% 0%')}
+              onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
+              onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',
