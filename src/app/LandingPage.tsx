@@ -5,14 +5,26 @@ import { useEffect, useRef, useState } from 'react'
 
 import ArtistSlideshow from './ArtistSlideshow'
 
+
 export default function LandingPage({ initialArtists = [] }: Readonly<{ initialArtists?: { url: string; name: string }[] }>) {
   const [expanded, setExpanded] = useState(false)
-  const [btnHovered, setBtnHovered] = useState(false)
-  const [creditsHovered, setCreditsHovered] = useState(false)
-  const [leadsHovered, setLeadsHovered] = useState(false)
 
   const panelRef = useRef<HTMLDivElement>(null)
   const [panelH, setPanelH] = useState(180)
+
+  useEffect(() => {
+    if (!expanded) return
+    const panel = panelRef.current
+    const close = (e: Event) => {
+      if (panel && !panel.contains(e.target as Node)) setExpanded(false)
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('touchstart', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('touchstart', close)
+    }
+  }, [expanded])
 
   useEffect(() => {
     const panel = panelRef.current
@@ -31,7 +43,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
   return (
     <div
       className="relative w-screen h-screen overflow-hidden bg-[#0e0e0e]"
-      style={{ '--panel-h': `${panelH}px` } as React.CSSProperties}
+      data-panel-open={expanded ? '' : undefined}
+      style={{ '--panel-h': `${panelH}px`, height: '100dvh' } as React.CSSProperties}
     >
       <ArtistSlideshow initialArtists={initialArtists} />
 
@@ -52,9 +65,31 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           transform-origin: left center;
           transition: transform 0.2s ease;
         }
-        .zoom-el:hover {
-          transform: scale(1.06);
+        .zoom-el:hover { transform: scale(1.06); }
+
+        .start-btn {
+          background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
+          background-size: 200% 100%;
+          background-position: 0% 0%;
+          transition: background-position 0.5s ease, transform 0.2s ease;
         }
+        .start-btn:hover { background-position: 100% 0%; }
+
+        .credits-link {
+          background-image: linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%);
+          background-size: 300% 100%;
+          background-position: 0% 0%;
+          transition: background-position 0.5s ease, transform 0.2s ease;
+        }
+        .credits-link:hover { background-position: 65% 0%; }
+
+        .leads-link {
+          background-image: linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%);
+          background-size: 300% 100%;
+          background-position: 0% 0%;
+          transition: background-position 0.5s ease, transform 0.2s ease;
+        }
+        .leads-link:hover { background-position: 65% 0%; }
 
         @media (max-width: 1024px) {
           .bg-gradient-overlay {
@@ -63,24 +98,42 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           .ui-panel {
             top: auto !important;
             left: 50% !important;
-            bottom: 6vh !important;
+            bottom: 10dvh !important;
             transform: translateX(-50%) !important;
-            width: min(70vw, 320px) !important;
+            width: min(57vw, 230px) !important;
           }
           .zoom-el {
             transform-origin: center center !important;
           }
+          .start-btn {
+            padding: 8px 10px !important;
+            font-size: clamp(14px, 4.5vw, 18px) !important;
+          }
+          .credits-link, .leads-link {
+            padding: 8px 10px !important;
+            font-size: clamp(14px, 4.5vw, 18px) !important;
+          }
+          .tagline {
+            font-size: clamp(14px, 4.5vw, 18px) !important;
+            text-align: center !important;
+          }
+        }
+        @media (hover: none) {
           .zoom-el:active {
             transform: scale(1.06) !important;
+            transition: transform 0.05s ease !important;
           }
           .start-btn:active {
             background-position: 100% 0% !important;
+            transition: background-position 0.1s ease !important;
           }
           .credits-link:active {
             background-position: 65% 0% !important;
+            transition: background-position 0.1s ease !important;
           }
           .leads-link:active {
             background-position: 65% 0% !important;
+            transition: background-position 0.1s ease !important;
           }
         }
       `}</style>
@@ -98,7 +151,6 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           fontStyle: 'italic',
         }}
       >
-        {/* Logo SVG — drop streamrace-logo.svg into /public */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/streamrace-logo.svg"
@@ -107,27 +159,19 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.55))', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0s backwards' }}
         />
 
-        {/* Tagline */}
         <p
-          className="text-[#FFFBF7] zoom-el"
+          className="text-[#FFFBF7] zoom-el tagline"
           style={{ fontSize: 'clamp(13px, 1.5vw, 25px)', lineHeight: 1.2, textShadow: '0 1px 8px rgba(0,0,0,0.6)', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.07s backwards' }}
         >
           <span className="block whitespace-nowrap">Not monthly listeners.</span>
           <span className="block whitespace-nowrap">The all-time stream race.</span>
         </p>
 
-        {/* Button stack */}
         <div className="flex flex-col" style={{ marginTop: '1.75vh', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.14s backwards' }}>
           <button
-            onClick={() => setExpanded(!expanded)}
-            onMouseEnter={() => setBtnHovered(true)}
-            onMouseLeave={() => setBtnHovered(false)}
+            onClick={() => setExpanded(v => !v)}
             className="start-btn flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
             style={{
-              background: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
-              backgroundSize: '200% 100%',
-              backgroundPosition: btnHovered ? '100% 0%' : '0% 0%',
-              transition: 'background-position 0.5s ease, transform 0.2s ease',
               fontSize: 'clamp(13px, 1.5vw, 25px)',
               padding: '0.75vh 0.75vw',
               border: 'none',
@@ -163,16 +207,10 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           >
             <Link
               href="/all-credits"
-              onMouseEnter={() => setCreditsHovered(true)}
-              onMouseLeave={() => setCreditsHovered(false)}
               className="credits-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',
-                backgroundImage: 'linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)',
-                backgroundSize: '300% 100%',
-                backgroundPosition: creditsHovered ? '65% 0%' : '0% 0%',
-                transition: 'background-position 0.5s ease, transform 0.2s ease',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
               }}
             >
@@ -184,16 +222,10 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
 
             <Link
               href="/lead-streams"
-              onMouseEnter={() => setLeadsHovered(true)}
-              onMouseLeave={() => setLeadsHovered(false)}
               className="leads-link flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
               style={{
                 fontSize: 'clamp(13px, 1.5vw, 25px)',
                 padding: '0.75vh 0.75vw',
-                backgroundImage: 'linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)',
-                backgroundSize: '300% 100%',
-                backgroundPosition: leadsHovered ? '65% 0%' : '0% 0%',
-                transition: 'background-position 0.5s ease, transform 0.2s ease',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
               }}
             >

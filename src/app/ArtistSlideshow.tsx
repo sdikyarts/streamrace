@@ -11,10 +11,14 @@ const SLIDESHOW_STYLES = `
   visibility: hidden;
   overflow: visible;
   transform-origin: right top;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease-out;
   will-change: transform;
 }
 .artist-label-wrap:hover { transform: scale(1.06); }
+[data-panel-open] .artist-label-wrap {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 .artist-label-text {
   display: inline-block;
   white-space: nowrap;
@@ -36,6 +40,8 @@ const SLIDESHOW_STYLES = `
   .slideshow-container {
     width: 100% !important;
     left: 0 !important;
+    height: 60vh !important;
+    bottom: auto !important;
     -webkit-mask-image: linear-gradient(to bottom,
       black 0%, black 38%,
       rgba(0,0,0,0.92) 50%, rgba(0,0,0,0.60) 60%,
@@ -49,17 +55,25 @@ const SLIDESHOW_STYLES = `
   }
   .artist-label-wrap {
     top: auto !important;
-    right: 0 !important;
-    left: 0 !important;
+    right: auto !important;
+    left: 50% !important;
     width: max-content !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    bottom: calc(6vh + var(--panel-h, 180px) + 2vh) !important;
-    transform: none !important;
+    max-width: min(72vw, 240px) !important;
+    margin: 0 !important;
+    bottom: calc(10dvh + var(--panel-h, 180px) + 2.5dvh) !important;
+    transform: translateX(-50%) !important;
     transform-origin: center center !important;
+    padding: 3px 7px !important;
+    font-size: 13px !important;
   }
-  .artist-label-wrap:hover { transform: scale(1.06) !important; }
-  .artist-label-wrap:active { transform: scale(1.06) !important; }
+  .artist-label-text {
+    white-space: normal !important;
+    text-align: center !important;
+  }
+  .artist-label-wrap:hover { transform: translateX(-50%) scale(1.06) !important; }
+}
+@media (hover: none) {
+  .artist-label-wrap:active { transform: translateX(-50%) scale(1.06) !important; }
   .artist-label-wrap:active .artist-label-text { background-position: 100% 0% !important; }
 }
 `
@@ -244,6 +258,18 @@ function clearWidthTransition(e: Event) {
 function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: string) {
   if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
 
+  // On touch devices skip the width morph — just cross-fade the text
+  if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
+    text.style.transition = 'opacity 0.15s ease'
+    text.style.opacity = '0'
+    widthFallbackTimer = setTimeout(() => {
+      widthFallbackTimer = null
+      text.textContent = name
+      text.style.opacity = '1'
+    }, 150)
+    return
+  }
+
   const prevWidth = wrap.offsetWidth
   const prevName = text.textContent ?? ''
 
@@ -281,7 +307,6 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
 function preloadAndDetect(url: string): Promise<FacePos> {
   return new Promise(resolve => {
     const img = new Image()
-    img.crossOrigin = 'anonymous'
     img.onload = async () => {
       try {
         const nativeFace = await detectNativeFace(img)
