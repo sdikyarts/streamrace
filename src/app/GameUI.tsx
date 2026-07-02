@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -15,6 +15,14 @@ const GAME_STYLES = `
 @keyframes srSlideFromLeft {
   from { transform: translateX(-60%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes srSlideFromTop {
+  from { transform: translateY(-40%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes srSlideFromBottom {
+  from { transform: translateY(40%); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
 }
 .sr-name-box {
   overflow: visible;
@@ -68,6 +76,12 @@ const GAME_STYLES = `
   will-change: transform;
 }
 .sr-score:hover { transform: scale(1.06); }
+.sr-name-line {
+  display: inline;
+  background-color: white;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 .sr-go-elem {
   transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
@@ -112,7 +126,31 @@ interface ArtistState {
 
 // ── artist name label ─────────────────────────────────────────────────────────
 
-function ArtistNameLabel({ name }: Readonly<{ name: string }>) {
+function ArtistNameLabel({ name, compact }: Readonly<{ name: string; compact?: boolean }>) {
+  if (compact) {
+    // Each wrapped line gets its own white background box, center-aligned
+    return (
+      <div
+        className="sr-name-box"
+        style={{
+          overflow: 'visible',
+          fontFamily: 'var(--font-helvetica)',
+          fontWeight: 700,
+          fontStyle: 'italic',
+          fontSize: 'clamp(17px, 4vw, 34px)',
+          userSelect: 'none',
+          textAlign: 'center',
+          width: 'min(72vw, 480px)',
+          lineHeight: 1.15,
+          filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.4))',
+        }}
+      >
+        <span className="sr-name-line" style={{ padding: '0.9vh 1.6vw' }}>
+          <span className="sr-name-text" style={{ display: 'inline', padding: 0 }}>{name}</span>
+        </span>
+      </div>
+    )
+  }
   return (
     <div
       className="sr-name-box"
@@ -123,20 +161,14 @@ function ArtistNameLabel({ name }: Readonly<{ name: string }>) {
         fontFamily: 'var(--font-helvetica)',
         fontWeight: 700,
         fontStyle: 'italic',
-        // Smaller than before — allows two-line wrap for long names
         fontSize: 'clamp(16px, 2vw, 34px)',
         userSelect: 'none',
         boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
-        // Max width so long names wrap to two lines instead of overflowing
         maxWidth: 'min(40vw, 480px)',
         textAlign: 'center',
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-        }}
-      >
+      <div style={{ position: 'relative' }}>
         <span className="sr-name-text">{name}</span>
       </div>
     </div>
@@ -145,7 +177,7 @@ function ArtistNameLabel({ name }: Readonly<{ name: string }>) {
 
 // ── stream count display ──────────────────────────────────────────────────────
 
-function StreamCountDisplay({ streams }: Readonly<{ streams: number }>) {
+function StreamCountDisplay({ streams, compact }: Readonly<{ streams: number; compact?: boolean }>) {
   return (
     <div
       className="sr-stream"
@@ -154,7 +186,7 @@ function StreamCountDisplay({ streams }: Readonly<{ streams: number }>) {
         backgroundSize: '200% 100%',
         // Figma: outer box 454×117, inner text 414×77 → ~20px padding each side.
         // At ~88px font: 20px vertical ≈ 2.2vh at 900px viewport height.
-        padding: '2vh 1.5vw',
+        padding: compact ? '1.1vh 2.2vw' : '2vh 1.5vw',
         boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
         userSelect: 'none',
       }}
@@ -166,7 +198,7 @@ function StreamCountDisplay({ streams }: Readonly<{ streams: number }>) {
           justifyContent: 'center',
           color: '#FFFBF7',
           fontFamily: 'var(--font-burst)',
-          fontSize: 'clamp(30px, 5vw, 88px)',
+          fontSize: compact ? 'clamp(38px, 10vw, 88px)' : 'clamp(30px, 5vw, 88px)',
           lineHeight: 0.75,
           whiteSpace: 'nowrap',
           position: 'relative',
@@ -182,7 +214,7 @@ function StreamCountDisplay({ streams }: Readonly<{ streams: number }>) {
 
 // ── description text ──────────────────────────────────────────────────────────
 
-function DescText({ children }: Readonly<{ children: React.ReactNode }>) {
+function DescText({ children, compact }: Readonly<{ children: React.ReactNode; compact?: boolean }>) {
   return (
     <p
       className="sr-desc"
@@ -191,7 +223,7 @@ function DescText({ children }: Readonly<{ children: React.ReactNode }>) {
         fontFamily: 'var(--font-helvetica)',
         fontWeight: 700,
         fontStyle: 'italic',
-        fontSize: 'clamp(12px, 1.5vw, 24px)',
+        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(12px, 1.5vw, 24px)',
         textShadow: '0 1px 8px rgba(0,0,0,0.8)',
         textAlign: 'center',
         lineHeight: 1.3,
@@ -212,12 +244,14 @@ function GuessButton({
   gradient,
   onClick,
   disabled,
+  compact,
 }: Readonly<{
   label: string
   icon: React.ReactNode
   gradient: string
   onClick: () => void
   disabled: boolean
+  compact?: boolean
 }>) {
   return (
     <button
@@ -233,8 +267,8 @@ function GuessButton({
         // backgroundImage + backgroundSize inline; backgroundPosition in CSS
         backgroundImage: gradient,
         backgroundSize: '300% 100%',
-        fontSize: 'clamp(13px, 1.5vw, 25px)',
-        padding: '0.75vh 0.75vw',
+        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(13px, 1.5vw, 25px)',
+        padding: compact ? '0.75vh clamp(7px, 1.7vw, 20px)' : '0.75vh 0.75vw',
         border: 'none',
         boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
         fontFamily: 'var(--font-helvetica)',
@@ -261,11 +295,13 @@ function ScoreBox({
   value,
   corner,
   bg,
+  compact,
 }: Readonly<{
   label: string
   value: number
   corner: 'top-right' | 'top-left'
   bg: string
+  compact?: boolean
 }>) {
   const isRight = corner === 'top-right'
   const rowBase: React.CSSProperties = {
@@ -288,10 +324,10 @@ function ScoreBox({
         filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
       }}
     >
-      <div style={{ ...rowBase, fontSize: 'clamp(10px, 1vw, 16px)', lineHeight: 1.2, padding: '0.25vh 0.6vw' }}>
+      <div style={{ ...rowBase, fontSize: compact ? 'clamp(10px, 2.3vw, 14px)' : 'clamp(10px, 1vw, 16px)', lineHeight: 1.2, padding: compact ? '0.25vh 1vw' : '0.25vh 0.6vw' }}>
         {label}
       </div>
-      <div style={{ ...rowBase, fontSize: 'clamp(14px, 1.65vw, 28px)', lineHeight: 1.15, padding: '0.25vh 0.6vw', marginTop: '-1px' }}>
+      <div style={{ ...rowBase, fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(14px, 1.65vw, 28px)', lineHeight: 1.15, padding: compact ? '0.25vh 1vw' : '0.25vh 0.6vw', marginTop: '-1px' }}>
         {value.toLocaleString('en-US')}
       </div>
     </div>
@@ -355,6 +391,7 @@ function ArtistPanel({
   artist1Name,
   onGuess,
   disabled,
+  compact,
 }: Readonly<{
   artist: GameArtist
   showStreams: boolean
@@ -363,6 +400,7 @@ function ArtistPanel({
   artist1Name?: string
   onGuess?: (g: 'higher' | 'lower') => void
   disabled: boolean
+  compact?: boolean
 }>) {
   const abs: React.CSSProperties = { position: 'absolute', inset: 0 }
 
@@ -395,9 +433,9 @@ function ArtistPanel({
           zIndex: 2,
         }}
       >
-        <ArtistNameLabel name={artist.name} />
+        <ArtistNameLabel name={artist.name} compact={compact} />
 
-        <DescText>has</DescText>
+        <DescText compact={compact}>has</DescText>
 
         {isRight && !showStreams ? (
           <div
@@ -415,6 +453,7 @@ function ArtistPanel({
               gradient="linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)"
               onClick={() => onGuess?.('higher')}
               disabled={disabled}
+              compact={compact}
             />
             <GuessButton
               label="Lower"
@@ -422,19 +461,20 @@ function ArtistPanel({
               gradient="linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)"
               onClick={() => onGuess?.('lower')}
               disabled={disabled}
+              compact={compact}
             />
           </div>
         ) : (
-          <StreamCountDisplay streams={artist.streams} />
+          <StreamCountDisplay streams={artist.streams} compact={compact} />
         )}
 
         {isRight && !showStreams ? (
           <>
-            <DescText>{modeLabel} on Spotify than</DescText>
-            {artist1Name && <DescText>{artist1Name}</DescText>}
+            <DescText compact={compact}>{modeLabel} on Spotify than</DescText>
+            {artist1Name && <DescText compact={compact}>{artist1Name}</DescText>}
           </>
         ) : (
-          <DescText>{modeLabel} on Spotify</DescText>
+          <DescText compact={compact}>{modeLabel} on Spotify</DescText>
         )}
       </div>
     </div>
@@ -460,6 +500,15 @@ export default function GameUI({
   const [lastCorrect, setLastCorrect] = useState(true)
   const [rightRevealed, setRightRevealed] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const keyGen = useRef(0)
   const nextKey = () => ++keyGen.current
@@ -609,12 +658,26 @@ export default function GameUI({
     }
   }
 
+  function handleReplay() {
+    const sorted = sortedPool.current
+    if (sorted.length >= 2) {
+      const leftArtist = sorted[Math.floor(rng() * sorted.length)]
+      const rightArtist = pickNear(leftArtist, [leftArtist], 0)
+      setLeft({ artist: leftArtist, key: nextKey() })
+      setRight({ artist: rightArtist, key: nextKey() })
+    }
+    setScore(0)
+    setPhase('playing')
+    setRightRevealed(false)
+    setLastCorrect(true)
+  }
+
   const modeLabel = mode === 'all-credits' ? 'all-credits streams' : 'lead streams'
   const busy = phase !== 'playing'
 
   if (!left || !right) {
     return (
-      <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#0e0e0e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#0e0e0e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#FFFBF7', fontFamily: 'var(--font-helvetica)', fontStyle: 'italic' }}>
           {loadError ?? 'Loading...'}
         </span>
@@ -627,69 +690,122 @@ export default function GameUI({
       style={{
         position: 'relative',
         width: '100vw',
-        height: '100vh',
+        height: '100dvh',
         overflow: 'hidden',
         background: '#0e0e0e',
       }}
     >
-      {/* Injected directly — bypasses Tailwind/PostCSS pipeline */}
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: GAME_STYLES }} />
 
-      {/* ── Two artist panels ── */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
-        {/* LEFT — Artist 1 */}
-        <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
+      {isDesktop ? (
+        <>
+          {/* ── DESKTOP: original horizontal layout (unchanged) ── */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+            {/* LEFT — Artist 1 */}
+            <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
+              <div
+                key={`left-${left.key}`}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromLeft 0.4s ease' }}
+              >
+                <ArtistPanel
+                  artist={left.artist}
+                  showStreams
+                  isRight={false}
+                  modeLabel={modeLabel}
+                  disabled={busy}
+                />
+              </div>
+              {/* High Score — top-right of left panel */}
+              <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 5 }}>
+                <ScoreBox label="High Score" value={highScore} corner="top-right" bg="#c59003" />
+              </div>
+            </div>
+
+            {/* RIGHT — Artist 2 */}
+            <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
+              <div
+                key={`right-${right.key}`}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromRight 0.4s ease' }}
+              >
+                <ArtistPanel
+                  artist={right.artist}
+                  showStreams={rightRevealed}
+                  isRight
+                  modeLabel={modeLabel}
+                  artist1Name={left.artist.name}
+                  onGuess={handleGuess}
+                  disabled={busy}
+                />
+              </div>
+              {/* Current Score — top-left of right panel */}
+              <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 5 }}>
+                <ScoreBox label="Current Score" value={score} corner="top-left" bg="#6d6d6d" />
+              </div>
+            </div>
+          </div>
+
+          {/* Center divider */}
           <div
-            key={`left-${left.key}`}
-            style={{
-              position: 'absolute', inset: 0,
-              animation: 'srSlideFromLeft 0.4s ease',
-            }}
-          >
-            <ArtistPanel
-              artist={left.artist}
-              showStreams
-              isRight={false}
-              modeLabel={modeLabel}
-              disabled={busy}
-            />
+            style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: 'rgba(255,255,255,0.08)', pointerEvents: 'none', zIndex: 10 }}
+          />
+        </>
+      ) : (
+        <>
+          {/* ── MOBILE/TABLET: vertical layout with circular top panel ── */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+
+            {/* TOP — Artist 1: full-bleed photo */}
+            <div style={{ position: 'relative', height: '50%', flexShrink: 0, overflow: 'hidden' }}>
+              <div
+                key={`top-${left.key}`}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromTop 0.4s ease' }}
+              >
+                <ArtistPanel
+                  artist={left.artist}
+                  showStreams
+                  isRight={false}
+                  modeLabel={modeLabel}
+                  disabled={busy}
+                  compact
+                />
+              </div>
+            </div>
+
+            {/* BOTTOM — Artist 2: full-bleed photo */}
+            <div style={{ position: 'relative', height: '50%', flexShrink: 0, overflow: 'hidden' }}>
+              <div
+                key={`bottom-${right.key}`}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromBottom 0.4s ease' }}
+              >
+                <ArtistPanel
+                  artist={right.artist}
+                  showStreams={rightRevealed}
+                  isRight
+                  modeLabel={modeLabel}
+                  artist1Name={left.artist.name}
+                  onGuess={handleGuess}
+                  disabled={busy}
+                  compact
+                />
+              </div>
+            </div>
           </div>
 
-          {/* High Score — top-right of left panel */}
-          <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 5 }}>
-            <ScoreBox label="High Score" value={highScore} corner="top-right" bg="#c59003" />
-          </div>
-        </div>
-
-        {/* RIGHT — Artist 2 */}
-        <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
+          {/* Horizontal divider */}
           <div
-            key={`right-${right.key}`}
-            style={{ position: 'absolute', inset: 0, animation: 'srSlideFromRight 0.4s ease' }}
-          >
-            <ArtistPanel
-              artist={right.artist}
-              showStreams={rightRevealed}
-              isRight
-              modeLabel={modeLabel}
-              artist1Name={left.artist.name}
-              onGuess={handleGuess}
-              disabled={busy}
-            />
-          </div>
+            style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)', height: 2, background: 'rgba(255,255,255,0.08)', pointerEvents: 'none', zIndex: 10 }}
+          />
 
-          {/* Current Score — top-left of right panel */}
-          <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 5 }}>
-            <ScoreBox label="Current Score" value={score} corner="top-left" bg="#6d6d6d" />
+          {/* Score boxes at the dividing line */}
+          <div style={{ position: 'absolute', top: '50%', left: 14, zIndex: 11, transform: 'translateY(-50%)' }}>
+            <ScoreBox label="High Score" value={highScore} corner="top-left" bg="#c59003" compact />
           </div>
-        </div>
-      </div>
-
-      {/* ── Center divider ── */}
-      <div
-        style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: 'rgba(255,255,255,0.08)', pointerEvents: 'none', zIndex: 10 }}
-      />
+          <div style={{ position: 'absolute', top: '50%', right: 14, zIndex: 11, transform: 'translateY(-50%)' }}>
+            <ScoreBox label="Current Score" value={score} corner="top-right" bg="#6d6d6d" compact />
+          </div>
+        </>
+      )}
 
       {/* ── Result circle ── */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -713,17 +829,17 @@ export default function GameUI({
             WebkitBackdropFilter: 'blur(8px)',
           }}
         >
-          {/* GAME OVER!!! — white box + gradient text, same as artist name but bigger */}
+          {/* GAME OVER!!! */}
           <div
             className="sr-name-box"
             style={{
               backgroundColor: 'white',
-              padding: '0.5vh 1.5vw',
+              padding: isDesktop ? '0.5vh 1.5vw' : '0.06vh 0.8vw',
               overflow: 'visible',
               fontFamily: 'var(--font-helvetica)',
               fontWeight: 700,
               fontStyle: 'italic',
-              fontSize: 'clamp(26px, 3.2vw, 52px)',
+              fontSize: isDesktop ? 'clamp(26px, 3.2vw, 52px)' : 'clamp(24px, 7vw, 40px)',
               userSelect: 'none',
               boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
             }}
@@ -733,17 +849,16 @@ export default function GameUI({
             </div>
           </div>
 
-          {/* Middle group: You scored + score + high score */}
+          {/* You scored + score + high score */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px, 2vh, 22px)' }}>
-            <DescText>You scored:</DescText>
+            <DescText compact={!isDesktop}>You scored:</DescText>
 
-            {/* Score — same as StreamCountDisplay but bigger */}
             <div
               className="sr-stream"
               style={{
                 backgroundImage: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
                 backgroundSize: '200% 100%',
-                padding: '2.5vh 2.5vw',
+                padding: isDesktop ? '2.5vh 2.5vw' : '1.1vh 2.2vw',
                 boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
                 userSelect: 'none',
               }}
@@ -755,7 +870,7 @@ export default function GameUI({
                   justifyContent: 'center',
                   color: '#FFFBF7',
                   fontFamily: 'var(--font-burst)',
-                  fontSize: 'clamp(50px, 8vw, 140px)',
+                  fontSize: isDesktop ? 'clamp(50px, 8vw, 140px)' : 'clamp(55px, 14vw, 140px)',
                   lineHeight: 0.75,
                   whiteSpace: 'nowrap',
                   position: 'relative',
@@ -767,7 +882,6 @@ export default function GameUI({
               </div>
             </div>
 
-            {/* High Score — GuessButton style, centered, no icon, non-interactive */}
             <div
               className="sr-btn"
               style={{
@@ -775,8 +889,8 @@ export default function GameUI({
                 color: '#FFFBF7',
                 backgroundImage: 'linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)',
                 backgroundSize: '300% 100%',
-                fontSize: 'clamp(13px, 1.5vw, 25px)',
-                padding: '0.75vh 0.75vw',
+                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 fontFamily: 'var(--font-helvetica)',
                 fontWeight: 700,
@@ -790,28 +904,57 @@ export default function GameUI({
             </div>
           </div>
 
-          {/* BACK TO HOME — gray, no gradient, cursor pointer */}
-          <button
-            onClick={() => router.push('/')}
-            className="sr-go-elem"
-            style={{
-              width: 'clamp(200px, 22vw, 380px)',
-              color: '#FFFBF7',
-              backgroundColor: '#6d6d6d',
-              fontSize: 'clamp(13px, 1.5vw, 25px)',
-              padding: '0.75vh 0.75vw',
-              border: 'none',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-              fontFamily: 'var(--font-helvetica)',
-              fontWeight: 700,
-              fontStyle: 'italic',
-              cursor: 'pointer',
-              textAlign: 'center',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            BACK TO HOME
-          </button>
+          {/* PLAY AGAIN + BACK TO HOME — narrower gap between them */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px, 2vh, 22px)' }}>
+            <button
+              onClick={handleReplay}
+              className="sr-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 'clamp(200px, 22vw, 380px)',
+                color: '#FFFBF7',
+                backgroundImage: 'linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)',
+                backgroundSize: '300% 100%',
+                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
+                border: 'none',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                fontFamily: 'var(--font-helvetica)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>PLAY AGAIN</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/')}
+              className="sr-go-elem"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 'clamp(200px, 22vw, 380px)',
+                color: '#FFFBF7',
+                backgroundColor: '#6d6d6d',
+                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
+                border: 'none',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                fontFamily: 'var(--font-helvetica)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>BACK TO HOME</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.18.163'],
   images: {
     remotePatterns: [new URL('https://i.scdn.co/**')],
+    qualities: [75, 100],
   },
 };
 
