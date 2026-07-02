@@ -125,7 +125,6 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .about-btn:hover { background-position: 65% 0%; }
-        .expand-overlay { display: none; }
 
         @media (max-width: 1024px) {
           .bg-gradient-overlay {
@@ -153,23 +152,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             font-size: clamp(14px, 4.5vw, 18px) !important;
             text-align: center !important;
           }
-          .expand-overlay { display: block; }
         }
       `}</style>
-
-      {/* Translucent black overlay — only visible on mobile/tablet when panel is expanded */}
-      <div
-        className="expand-overlay"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 1,
-          background: 'rgba(0,0,0,0.6)',
-          opacity: expanded ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          pointerEvents: 'none',
-        }}
-      />
 
       <div
         ref={panelRef}

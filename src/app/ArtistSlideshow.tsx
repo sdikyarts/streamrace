@@ -15,10 +15,6 @@ const SLIDESHOW_STYLES = `
   will-change: transform;
 }
 .artist-label-wrap:hover { transform: scale(1.06); }
-[data-panel-open] .artist-label-wrap {
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
 .artist-label-text {
   display: inline-block;
   white-space: nowrap;
@@ -37,20 +33,32 @@ const SLIDESHOW_STYLES = `
 .artist-label-wrap:hover .artist-label-text { background-position: 100% 0%; }
 
 @media (max-width: 1024px) {
+  [data-panel-open] .artist-label-wrap {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
   .slideshow-container {
     width: 100% !important;
     left: 0 !important;
     height: 68vh !important;
     bottom: auto !important;
     -webkit-mask-image: linear-gradient(to bottom,
-      black 0%, black 80%,
-      rgba(0,0,0,0.54) 86%, rgba(0,0,0,0.22) 91%,
-      rgba(0,0,0,0.04) 96%, transparent 99%
+      black 0%, black 38%,
+      rgba(0,0,0,0.95) 46%, rgba(0,0,0,0.86) 53%,
+      rgba(0,0,0,0.74) 60%, rgba(0,0,0,0.60) 67%,
+      rgba(0,0,0,0.46) 73%, rgba(0,0,0,0.33) 79%,
+      rgba(0,0,0,0.22) 85%, rgba(0,0,0,0.13) 90%,
+      rgba(0,0,0,0.06) 94%, rgba(0,0,0,0.02) 97%,
+      transparent 100%
     ) !important;
     mask-image: linear-gradient(to bottom,
-      black 0%, black 80%,
-      rgba(0,0,0,0.54) 86%, rgba(0,0,0,0.22) 91%,
-      rgba(0,0,0,0.04) 96%, transparent 99%
+      black 0%, black 38%,
+      rgba(0,0,0,0.95) 46%, rgba(0,0,0,0.86) 53%,
+      rgba(0,0,0,0.74) 60%, rgba(0,0,0,0.60) 67%,
+      rgba(0,0,0,0.46) 73%, rgba(0,0,0,0.33) 79%,
+      rgba(0,0,0,0.22) 85%, rgba(0,0,0,0.13) 90%,
+      rgba(0,0,0,0.06) 94%, rgba(0,0,0,0.02) 97%,
+      transparent 100%
     ) !important;
   }
   .artist-label-wrap {
@@ -140,6 +148,12 @@ function extractEdgeColors(url: string): Promise<EdgeColors> {
 
 let nameAnimTimer: ReturnType<typeof setTimeout> | null = null
 
+// Name-swap phases are budgeted out of FADE_DURATION so the label finishes
+// changing exactly when the picture crossfade and accent-color transition do.
+const NAME_OUT_MS = Math.round(FADE_DURATION * 0.17)
+const NAME_HOLD_MS = Math.round(FADE_DURATION * 0.28)
+const NAME_IN_MS = FADE_DURATION - NAME_OUT_MS - NAME_HOLD_MS
+
 function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: string) {
   if (nameAnimTimer !== null) { clearTimeout(nameAnimTimer); nameAnimTimer = null }
 
@@ -153,7 +167,7 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
 
   if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
     // Mobile/touch: scale+fade out, then scale+spring in
-    text.style.transition = 'opacity 0.22s ease, transform 0.22s ease'
+    text.style.transition = `opacity ${NAME_OUT_MS}ms ease, transform ${NAME_OUT_MS}ms ease`
     text.style.opacity = '0'
     text.style.transform = 'scale(0.88)'
 
@@ -165,7 +179,8 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
       text.style.transform = 'scale(0.88)'
       void wrap.getBoundingClientRect()
 
-      text.style.transition = 'opacity 0.55s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)'
+      const inMs = FADE_DURATION - NAME_OUT_MS
+      text.style.transition = `opacity ${inMs}ms ease, transform ${inMs}ms cubic-bezier(0.22,1,0.36,1)`
       text.style.opacity = '1'
       text.style.transform = 'scale(1)'
 
@@ -173,8 +188,8 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
         nameAnimTimer = null
         text.style.transition = ''
         text.style.transform = ''
-      }, 750)
-    }, 260)
+      }, inMs + 100)
+    }, NAME_OUT_MS)
     return
   }
 
@@ -185,7 +200,6 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   text.style.whiteSpace = 'nowrap'
   text.textContent = name
   wrap.style.width = 'max-content'
-  wrap.getBoundingClientRect()
   const nextWidth = wrap.getBoundingClientRect().width + 8
   text.textContent = prevName
   text.style.whiteSpace = ''
@@ -194,36 +208,37 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
 
   wrap.style.overflow = 'hidden'
 
-  // Old text: shrink + fade out
-  text.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+  // Phase 1: old text fades + shrinks out on its own — nothing else moves yet
+  text.style.transition = `opacity ${NAME_OUT_MS}ms ease, transform ${NAME_OUT_MS}ms ease`
   text.style.opacity = '0'
-  text.style.transform = 'scale(0.82)'
+  text.style.transform = 'scale(0.85)'
 
-  // Container: morph width with gentle spring overshoot
-  wrap.style.transition = 'width 0.8s cubic-bezier(0.25, 1.2, 0.5, 1), transform 0.45s cubic-bezier(0.22,1,0.36,1)'
-  wrap.style.width = `${nextWidth}px`
-
-  // New text springs in while container is still morphing (overlapping = morphy feel)
   nameAnimTimer = setTimeout(() => {
-    nameAnimTimer = null
+    // Phase 2: container morphs to the new width while the text is invisible,
+    // so the resize itself is never seen fighting with a moving label
+    wrap.style.transition = `width ${NAME_HOLD_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+    wrap.style.width = `${nextWidth}px`
     text.textContent = name
     text.style.transition = 'none'
-    text.style.transform = 'scale(0.88)'
+    text.style.transform = 'scale(0.9)'
     void text.getBoundingClientRect()
 
-    text.style.transition = 'opacity 0.55s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)'
-    text.style.opacity = '1'
-    text.style.transform = 'scale(1)'
-
     nameAnimTimer = setTimeout(() => {
-      nameAnimTimer = null
-      wrap.style.overflow = ''
-      wrap.style.transition = ''
-      wrap.style.width = ''
-      text.style.transition = ''
-      text.style.transform = ''
-    }, 750)
-  }, 230)
+      // Phase 3: new text fades + grows in once the box has settled
+      text.style.transition = `opacity ${NAME_IN_MS}ms ease, transform ${NAME_IN_MS}ms cubic-bezier(0.22,1,0.36,1)`
+      text.style.opacity = '1'
+      text.style.transform = 'scale(1)'
+
+      nameAnimTimer = setTimeout(() => {
+        nameAnimTimer = null
+        wrap.style.overflow = ''
+        wrap.style.transition = ''
+        wrap.style.width = ''
+        text.style.transition = ''
+        text.style.transform = ''
+      }, NAME_IN_MS + 100)
+    }, NAME_HOLD_MS)
+  }, NAME_OUT_MS)
 }
 
 // ── Artist list cache (localStorage, 1-hour TTL) ─────────────────────────────
