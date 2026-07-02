@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const SLIDESHOW_STYLES = `
 @keyframes artistNameIn {
-  from { opacity: 0; transform: translateY(-40px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-24px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .artist-label-wrap {
   visibility: hidden;
@@ -138,66 +138,52 @@ function extractEdgeColors(url: string): Promise<EdgeColors> {
 
 // ── Name width animation (module-level to avoid deep function nesting) ───────
 
-let pendingNameSwap: { text: HTMLSpanElement; name: string } | null = null
-let widthFallbackTimer: ReturnType<typeof setTimeout> | null = null
-
-function doNameSwap(wrap: HTMLDivElement) {
-  wrap.removeEventListener('transitionend', clearWidthTransition)
-  wrap.style.transition = ''
-  wrap.style.overflow = ''
-  if (pendingNameSwap) {
-    const { text, name } = pendingNameSwap
-    pendingNameSwap = null
-    text.textContent = name
-    text.style.transition = 'opacity 0.35s ease'
-    text.style.opacity = '1'
-  }
-  wrap.style.width = ''
-}
-
-function clearWidthTransition(e: Event) {
-  if ((e as TransitionEvent).propertyName !== 'width') return
-  if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
-  doNameSwap(e.currentTarget as HTMLDivElement)
-}
+let nameAnimTimer: ReturnType<typeof setTimeout> | null = null
 
 function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: string) {
-  if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
+  if (nameAnimTimer !== null) { clearTimeout(nameAnimTimer); nameAnimTimer = null }
 
-  // On touch devices skip the width morph — cross-fade the text.
+  // Snap out of any in-progress animation instantly
+  wrap.style.transition = 'none'
+  text.style.transition = 'none'
+  wrap.style.overflow = ''
+  wrap.style.width = ''
+  text.style.transform = ''
+  void wrap.getBoundingClientRect()
+
   if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
-    wrap.removeEventListener('transitionend', clearWidthTransition)
-    pendingNameSwap = null
-    wrap.style.width = ''
-    wrap.style.overflow = ''
-
-    text.style.transition = 'opacity 0.32s ease'
+    // Mobile/touch: scale+fade out, then scale+spring in
+    text.style.transition = 'opacity 0.22s ease, transform 0.22s ease'
     text.style.opacity = '0'
+    text.style.transform = 'scale(0.88)'
 
-    widthFallbackTimer = setTimeout(() => {
-      widthFallbackTimer = null
+    nameAnimTimer = setTimeout(() => {
+      nameAnimTimer = null
+      text.style.transition = 'none'
       wrap.style.transition = 'none'
       text.textContent = name
+      text.style.transform = 'scale(0.88)'
       void wrap.getBoundingClientRect()
-      wrap.style.transition = ''
 
-      requestAnimationFrame(() => {
-        text.style.opacity = '1'
-        widthFallbackTimer = setTimeout(() => {
-          widthFallbackTimer = null
-          text.style.transition = ''
-        }, 400)
-      })
-    }, 360)
+      text.style.transition = 'opacity 0.55s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)'
+      text.style.opacity = '1'
+      text.style.transform = 'scale(1)'
+
+      nameAnimTimer = setTimeout(() => {
+        nameAnimTimer = null
+        text.style.transition = ''
+        text.style.transform = ''
+      }, 750)
+    }, 260)
     return
   }
 
+  // Desktop: measure target width
   const prevWidth = wrap.offsetWidth
   const prevName = text.textContent ?? ''
 
   text.style.whiteSpace = 'nowrap'
   text.textContent = name
-  wrap.style.transition = 'none'
   wrap.style.width = 'max-content'
   wrap.getBoundingClientRect()
   const nextWidth = wrap.getBoundingClientRect().width + 8
@@ -207,17 +193,37 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   wrap.getBoundingClientRect()
 
   wrap.style.overflow = 'hidden'
-  text.style.transition = 'opacity 0.3s ease'
+
+  // Old text: shrink + fade out
+  text.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
   text.style.opacity = '0'
-  pendingNameSwap = { text, name }
-  wrap.style.transition = 'width 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.45s cubic-bezier(0.22,1,0.36,1)'
+  text.style.transform = 'scale(0.82)'
+
+  // Container: morph width with gentle spring overshoot
+  wrap.style.transition = 'width 0.8s cubic-bezier(0.25, 1.2, 0.5, 1), transform 0.45s cubic-bezier(0.22,1,0.36,1)'
   wrap.style.width = `${nextWidth}px`
-  wrap.removeEventListener('transitionend', clearWidthTransition)
-  wrap.addEventListener('transitionend', clearWidthTransition)
-  widthFallbackTimer = setTimeout(() => {
-    widthFallbackTimer = null
-    doNameSwap(wrap)
-  }, 650)
+
+  // New text springs in while container is still morphing (overlapping = morphy feel)
+  nameAnimTimer = setTimeout(() => {
+    nameAnimTimer = null
+    text.textContent = name
+    text.style.transition = 'none'
+    text.style.transform = 'scale(0.88)'
+    void text.getBoundingClientRect()
+
+    text.style.transition = 'opacity 0.55s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)'
+    text.style.opacity = '1'
+    text.style.transform = 'scale(1)'
+
+    nameAnimTimer = setTimeout(() => {
+      nameAnimTimer = null
+      wrap.style.overflow = ''
+      wrap.style.transition = ''
+      wrap.style.width = ''
+      text.style.transition = ''
+      text.style.transform = ''
+    }, 750)
+  }, 230)
 }
 
 // ── Artist list cache (localStorage, 1-hour TTL) ─────────────────────────────
