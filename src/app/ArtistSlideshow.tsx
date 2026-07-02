@@ -11,7 +11,7 @@ const SLIDESHOW_STYLES = `
   visibility: hidden;
   overflow: visible;
   transform-origin: right top;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease-out;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease-out;
   will-change: transform;
 }
 .artist-label-wrap:hover { transform: scale(1.06); }
@@ -28,7 +28,7 @@ const SLIDESHOW_STYLES = `
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  transition: background-position 0.5s ease;
+  transition: background-position 0.65s ease;
   padding-top: 0.15em;
   padding-bottom: 0.15em;
   padding-right: 0.15em;
@@ -40,17 +40,17 @@ const SLIDESHOW_STYLES = `
   .slideshow-container {
     width: 100% !important;
     left: 0 !important;
-    height: 60vh !important;
+    height: 68vh !important;
     bottom: auto !important;
     -webkit-mask-image: linear-gradient(to bottom,
-      black 0%, black 38%,
-      rgba(0,0,0,0.92) 50%, rgba(0,0,0,0.60) 60%,
-      rgba(0,0,0,0.22) 72%, transparent 83%
+      black 0%, black 80%,
+      rgba(0,0,0,0.54) 86%, rgba(0,0,0,0.22) 91%,
+      rgba(0,0,0,0.04) 96%, transparent 99%
     ) !important;
     mask-image: linear-gradient(to bottom,
-      black 0%, black 38%,
-      rgba(0,0,0,0.92) 50%, rgba(0,0,0,0.60) 60%,
-      rgba(0,0,0,0.22) 72%, transparent 83%
+      black 0%, black 80%,
+      rgba(0,0,0,0.54) 86%, rgba(0,0,0,0.22) 91%,
+      rgba(0,0,0,0.04) 96%, transparent 99%
     ) !important;
   }
   .artist-label-wrap {
@@ -99,8 +99,17 @@ function shuffle<T>(arr: T[]): T[] {
 
 // x/y = focal center as % of natural image dimensions
 // topY = top of head/subject as % of image height (pan starts just above here)
-interface FacePos { x: number; y: number; topY: number }
+interface FacePos { x: number; y: number; topY: number; leftColor?: string; bottomColor?: string }
 const DEFAULT_POS: FacePos = { x: 50, y: 38, topY: 15 }
+
+function averageRGB(data: Uint8ClampedArray): string {
+  let r = 0, g = 0, b = 0
+  const len = data.length / 4
+  for (let i = 0; i < data.length; i += 4) {
+    r += data[i]; g += data[i + 1]; b += data[i + 2]
+  }
+  return `rgb(${Math.round(r / len)},${Math.round(g / len)},${Math.round(b / len)})`
+}
 
 // Convert a focal point (% of image) to CSS background-position (%) so that
 // the focal point is centered in the element.
@@ -246,7 +255,7 @@ function doNameSwap(wrap: HTMLDivElement) {
     const { text, name } = pendingNameSwap
     pendingNameSwap = null
     text.textContent = name
-    text.style.transition = 'opacity 0.15s ease'
+    text.style.transition = 'opacity 0.35s ease'
     text.style.opacity = '1'
   }
   wrap.style.width = ''
@@ -271,7 +280,7 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
     wrap.style.width = ''
     wrap.style.overflow = ''
 
-    text.style.transition = 'opacity 0.18s ease'
+    text.style.transition = 'opacity 0.32s ease'
     text.style.opacity = '0'
 
     widthFallbackTimer = setTimeout(() => {
@@ -288,9 +297,9 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
         widthFallbackTimer = setTimeout(() => {
           widthFallbackTimer = null
           text.style.transition = ''
-        }, 220)
+        }, 400)
       })
-    }, 210)
+    }, 360)
     return
   }
 
@@ -312,11 +321,11 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   // Clip during the morph so the old (invisible) text can't visually bleed out
   wrap.style.overflow = 'hidden'
   // Fade text out (old name), morph container, then swap text and fade in
-  text.style.transition = 'opacity 0.15s ease'
+  text.style.transition = 'opacity 0.3s ease'
   text.style.opacity = '0'
   pendingNameSwap = { text, name }
   // Include transform so hover zoom stays smooth during a slide transition
-  wrap.style.transition = 'width 0.35s ease, transform 0.2s ease'
+  wrap.style.transition = 'width 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.45s cubic-bezier(0.22,1,0.36,1)'
   wrap.style.width = `${nextWidth}px`
   wrap.removeEventListener('transitionend', clearWidthTransition)
   wrap.addEventListener('transitionend', clearWidthTransition)
@@ -324,20 +333,34 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   widthFallbackTimer = setTimeout(() => {
     widthFallbackTimer = null
     doNameSwap(wrap)
-  }, 450)
+  }, 650)
 }
 
 // ── Detection entry point ────────────────────────────────────────────────────
 function preloadAndDetect(url: string): Promise<FacePos> {
   return new Promise(resolve => {
     const img = new Image()
+    img.crossOrigin = 'anonymous'
     img.onload = async () => {
       try {
-        const nativeFace = await detectNativeFace(img)
-        if (nativeFace) return resolve(nativeFace)
+        const smallCanvas = scaleToCanvas(img, 0.25)
 
-        // Fall back to a small saliency scan when native face detection is unavailable.
-        resolve(computeSaliencyPos(scaleToCanvas(img, 0.25)))
+        // Extract edge accent colors for gradient smoothing
+        let leftColor: string | undefined
+        let bottomColor: string | undefined
+        try {
+          const ctx = smallCanvas.getContext('2d')!
+          const w = smallCanvas.width, h = smallCanvas.height
+          const leftW = Math.max(1, Math.round(w * 0.08))
+          leftColor = averageRGB(ctx.getImageData(0, 0, leftW, h).data)
+          const botH = Math.max(1, Math.round(h * 0.08))
+          bottomColor = averageRGB(ctx.getImageData(0, h - botH, w, botH).data)
+        } catch { /* CORS blocked — skip color extraction */ }
+
+        const nativeFace = await detectNativeFace(img)
+        if (nativeFace) return resolve({ ...nativeFace, leftColor, bottomColor })
+
+        resolve({ ...computeSaliencyPos(smallCanvas), leftColor, bottomColor })
       } catch {
         resolve(DEFAULT_POS)
       }
@@ -383,6 +406,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
   const wrapper1Ref = useRef<HTMLDivElement>(null)
   const bg0Ref = useRef<HTMLImageElement>(null)
   const bg1Ref = useRef<HTMLImageElement>(null)
+  const accentGradientRef = useRef<HTMLDivElement>(null)
 
   function getWrapperEl(slot: 0 | 1) {
     return (slot === 0 ? wrapper0Ref : wrapper1Ref).current!
@@ -415,22 +439,33 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
 
   function startPan(slot: 0 | 1, url: string) {
     const el = getBgEl(slot)
+    const isMobile = window.matchMedia('(max-width: 1024px)').matches
+    const focal = faceCache.current.get(url)
 
-    if (window.matchMedia('(max-width: 1024px)').matches) {
+    // Imperatively set accent base color (avoids React re-renders during transitions).
+    // This div sits BELOW the image; the image's mask makes its edge transparent so
+    // the accent color bleeds through — blending image into accent instead of into black.
+    const accentEl = accentGradientRef.current
+    if (accentEl) {
+      const color = isMobile ? (focal?.bottomColor ?? 'rgb(14,14,14)') : (focal?.leftColor ?? 'rgb(14,14,14)')
+      accentEl.style.background = color
+    }
+
+    if (isMobile) {
       el.style.transition = 'none'
       el.style.objectPosition = '50% 50%'
       return
     }
 
-    const focal = faceCache.current.get(url) ?? DEFAULT_POS
+    const focalPos = focal ?? DEFAULT_POS
 
     // Pan starts just above the top of the head, ends at face/subject center
     // Always center horizontally; only pan vertically to the face
-    const aboveHead = Math.max(0, focal.topY - HEAD_MARGIN)
+    const aboveHead = Math.max(0, focalPos.topY - HEAD_MARGIN)
     const startX = 50
-    let startY = focalToBgPos({ x: focal.x, y: aboveHead }, el).y
+    let startY = focalToBgPos({ x: focalPos.x, y: aboveHead }, el).y
     const endX = 50
-    let endY = focalToBgPos(focal, el).y
+    let endY = focalToBgPos(focalPos, el).y
 
     // When the focal point is in the upper quarter of the image, focalToBgPos
     // clamps both start and end to 0% — no visible movement. Fall back to a
@@ -457,7 +492,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
     wrap.style.visibility = 'visible'
     wrap.style.animation = 'none'
     wrap.getBoundingClientRect()
-    wrap.style.animation = 'artistNameIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) backwards'
+    wrap.style.animation = 'artistNameIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards'
     wrap.addEventListener('animationend', () => { wrap.style.animation = '' }, { once: true })
   }
 
@@ -582,20 +617,28 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: SLIDESHOW_STYLES }} />
 
+      {/* Bottommost base layer — solid accent color that the image edge blends into.
+          Must come BEFORE slideshow-container so it renders below the image (same z-auto stacking, DOM order wins).
+          transition: background-color syncs color change with the 1800ms image crossfade. */}
       <div
-        className="slideshow-container absolute top-0 right-0 bottom-0 w-[67%]"
+        ref={accentGradientRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ transition: `background-color ${FADE_DURATION}ms ease` }}
+      />
+
+      <div
+        className="slideshow-container absolute top-0 right-0 bottom-0 w-[60%]"
         style={(() => {
           const mask = [
             'linear-gradient(to right,',
             '  transparent 0%,',
-            '  rgba(0,0,0,0.03) 6%,',
-            '  rgba(0,0,0,0.10) 13%,',
-            '  rgba(0,0,0,0.22) 21%,',
-            '  rgba(0,0,0,0.40) 29%,',
-            '  rgba(0,0,0,0.60) 37%,',
-            '  rgba(0,0,0,0.78) 44%,',
-            '  rgba(0,0,0,0.92) 50%,',
-            '  black 55%,',
+            '  rgba(0,0,0,0.08) 8%,',
+            '  rgba(0,0,0,0.20) 18%,',
+            '  rgba(0,0,0,0.38) 28%,',
+            '  rgba(0,0,0,0.58) 37%,',
+            '  rgba(0,0,0,0.78) 46%,',
+            '  rgba(0,0,0,0.93) 52%,',
+            '  black 57%,',
             '  black 100%',
             ')',
           ].join(' ')

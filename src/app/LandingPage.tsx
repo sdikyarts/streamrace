@@ -13,7 +13,7 @@ function applyTapStart(el: HTMLElement, bgPos: string) {
 }
 
 function applyTapEnd(el: HTMLElement) {
-  el.style.setProperty('transition', 'background-position 0.5s ease, transform 0.2s ease')
+  el.style.setProperty('transition', 'background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1)')
   void el.getBoundingClientRect()
   el.style.removeProperty('background-position')
   el.style.removeProperty('transform')
@@ -71,7 +71,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
       <div
         className="bg-gradient-overlay absolute inset-0 z-[1] pointer-events-none"
         style={{
-          background: 'linear-gradient(to right, #0e0e0e 18%, rgba(14,14,14,0.78) 34%, rgba(14,14,14,0.3) 52%, transparent 66%)',
+          background: 'linear-gradient(to right, #0e0e0e 10%, rgba(14,14,14,0.78) 24%, rgba(14,14,14,0.3) 38%, transparent 50%)',
         }}
       />
 
@@ -82,7 +82,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
         }
         .zoom-el {
           transform-origin: left center;
-          transition: transform 0.2s ease;
+          transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .zoom-el:hover { transform: scale(1.06); }
 
@@ -90,7 +90,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           background-image: linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81);
           background-size: 200% 100%;
           background-position: 0% 0%;
-          transition: background-position 0.5s ease, transform 0.2s ease;
+          transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .start-btn:hover { background-position: 100% 0%; }
 
@@ -98,7 +98,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           background-image: linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%);
           background-size: 300% 100%;
           background-position: 0% 0%;
-          transition: background-position 0.5s ease, transform 0.2s ease;
+          transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .credits-link:hover { background-position: 65% 0%; }
 
@@ -106,7 +106,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           background-image: linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%);
           background-size: 300% 100%;
           background-position: 0% 0%;
-          transition: background-position 0.5s ease, transform 0.2s ease;
+          transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .leads-link:hover { background-position: 65% 0%; }
 
@@ -114,7 +114,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           background-image: linear-gradient(to right, #c59003, #c59003 33%, #e8c400 100%);
           background-size: 300% 100%;
           background-position: 0% 0%;
-          transition: background-position 0.5s ease, transform 0.2s ease;
+          transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .leaderboard-btn:hover { background-position: 65% 0%; }
 
@@ -122,7 +122,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           background-image: linear-gradient(to right, #6d6d6d, #6d6d6d 33%, #909090 100%);
           background-size: 300% 100%;
           background-position: 0% 0%;
-          transition: background-position 0.5s ease, transform 0.2s ease;
+          transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
         .about-btn:hover { background-position: 65% 0%; }
         .expand-overlay { display: none; }
@@ -166,7 +166,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           zIndex: 1,
           background: 'rgba(0,0,0,0.6)',
           opacity: expanded ? 1 : 0,
-          transition: 'opacity 0.35s ease',
+          transition: 'opacity 0.5s ease',
           pointerEvents: 'none',
         }}
       />
@@ -189,18 +189,18 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           src="/streamrace-logo.svg"
           alt="StreamRace"
           className="w-full h-auto block zoom-el"
-          style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.55))', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0s backwards' }}
+          style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.55))', animation: 'flyInEl 0.85s cubic-bezier(0.22,1,0.36,1) 0s backwards' }}
         />
 
         <p
           className="text-[#FFFBF7] zoom-el tagline"
-          style={{ fontSize: 'clamp(15px, 1.8vw, 28px)', lineHeight: 1.2, textShadow: '0 1px 8px rgba(0,0,0,0.6)', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.07s backwards' }}
+          style={{ fontSize: 'clamp(15px, 1.8vw, 28px)', lineHeight: 1.2, textShadow: '0 1px 8px rgba(0,0,0,0.6)', animation: 'flyInEl 0.85s cubic-bezier(0.22,1,0.36,1) 0.1s backwards' }}
         >
           <span className="block whitespace-nowrap">Not monthly listeners.</span>
           <span className="block whitespace-nowrap">The all-time stream race.</span>
         </p>
 
-        <div className="flex flex-col" style={{ marginTop: '1.75vh', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.14s backwards' }}>
+        <div className="flex flex-col" style={{ marginTop: '1.75vh', animation: 'flyInEl 0.85s cubic-bezier(0.22,1,0.36,1) 0.2s backwards' }}>
           <button
             onClick={() => setExpanded(v => !v)}
             onTouchStart={(e) => applyTapStart(e.currentTarget, '100% 0%')}
@@ -218,7 +218,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             <span
               style={{
                 display: 'inline-block',
-                transition: 'transform 0.35s ease',
+                transition: 'transform 0.5s cubic-bezier(0.22,1,0.36,1)',
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
@@ -235,7 +235,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               maxHeight: expanded ? '600px' : '0',
               marginTop: expanded ? '1.2vh' : '0',
               opacity: expanded ? 1 : 0,
-              transition: 'max-height 0.35s ease, margin-top 0.35s ease, opacity 0.15s ease',
+              transition: 'max-height 0.55s cubic-bezier(0.22,1,0.36,1), margin-top 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.4s ease',
               display: 'flex',
               flexDirection: 'column',
               gap: '1.2vh',

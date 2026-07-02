@@ -26,7 +26,7 @@ const GAME_STYLES = `
 }
 .sr-name-box {
   overflow: visible;
-  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
   cursor: default;
   will-change: transform;
@@ -41,7 +41,7 @@ const GAME_STYLES = `
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  transition: background-position 0.5s ease;
+  transition: background-position 0.65s ease;
   padding-top: 0.15em;
   padding-bottom: 0;
   padding-right: 0.15em;
@@ -50,14 +50,14 @@ const GAME_STYLES = `
 .sr-name-box:hover .sr-name-text { background-position: 100% 0%; }
 .sr-stream {
   background-position: 0% 0%;
-  transition: background-position 0.5s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
   cursor: default;
   will-change: transform;
 }
 .sr-stream:hover { background-position: 100% 0%; transform: scale(1.06); }
 .sr-desc {
-  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
   cursor: default;
   will-change: transform;
@@ -65,13 +65,13 @@ const GAME_STYLES = `
 .sr-desc:hover { transform: scale(1.06); }
 .sr-btn {
   background-position: 0% 0%;
-  transition: background-position 0.5s ease, transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: background-position 0.65s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
   will-change: transform;
 }
 .sr-btn:hover:not(:disabled) { background-position: 65% 0%; transform: scale(1.06); }
 .sr-score {
-  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
   cursor: default;
   will-change: transform;
 }
@@ -83,7 +83,7 @@ const GAME_STYLES = `
   box-decoration-break: clone;
 }
 .sr-go-elem {
-  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
   transform-origin: center;
   cursor: default;
   will-change: transform;
@@ -344,7 +344,7 @@ function ResultCircle({ correct, visible }: Readonly<{ correct: boolean; visible
         top: '50%',
         left: '50%',
         transform: `translate(-50%, -50%) scale(${visible ? 1 : 0})`,
-        transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
+        transition: 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)',
         width: 'clamp(70px, 8vw, 130px)',
         height: 'clamp(70px, 8vw, 130px)',
         borderRadius: '50%',
@@ -706,7 +706,7 @@ export default function GameUI({
             <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
               <div
                 key={`left-${left.key}`}
-                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromLeft 0.4s ease' }}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromLeft 0.75s cubic-bezier(0.22,1,0.36,1)' }}
               >
                 <ArtistPanel
                   artist={left.artist}
@@ -726,7 +726,7 @@ export default function GameUI({
             <div style={{ position: 'relative', width: '50%', height: '100%', overflow: 'hidden' }}>
               <div
                 key={`right-${right.key}`}
-                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromRight 0.4s ease' }}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromRight 0.75s cubic-bezier(0.22,1,0.36,1)' }}
               >
                 <ArtistPanel
                   artist={right.artist}
@@ -759,7 +759,7 @@ export default function GameUI({
             <div style={{ position: 'relative', height: '50%', flexShrink: 0, overflow: 'hidden' }}>
               <div
                 key={`top-${left.key}`}
-                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromTop 0.4s ease' }}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromTop 0.75s cubic-bezier(0.22,1,0.36,1)' }}
               >
                 <ArtistPanel
                   artist={left.artist}
@@ -776,7 +776,7 @@ export default function GameUI({
             <div style={{ position: 'relative', height: '50%', flexShrink: 0, overflow: 'hidden' }}>
               <div
                 key={`bottom-${right.key}`}
-                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromBottom 0.4s ease' }}
+                style={{ position: 'absolute', inset: 0, animation: 'srSlideFromBottom 0.75s cubic-bezier(0.22,1,0.36,1)' }}
               >
                 <ArtistPanel
                   artist={right.artist}
