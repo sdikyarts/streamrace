@@ -83,8 +83,6 @@ const SLIDESHOW_STYLES = `
 
 const SLIDE_DURATION = 7000
 const FADE_DURATION = 1800
-// Small gap above the top of the head before the pan starts (% of image height)
-const HEAD_MARGIN = 3
 
 const rng = () => globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
 
@@ -97,10 +95,9 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-// x/y = focal center as % of natural image dimensions
-// topY = top of head/subject as % of image height (pan starts just above here)
-interface FacePos { x: number; y: number; topY: number; leftColor?: string; bottomColor?: string }
-const DEFAULT_POS: FacePos = { x: 50, y: 38, topY: 15 }
+// ── Edge-color extraction for accent gradient ─────────────────────────────────
+
+type EdgeColors = { leftColor?: string; bottomColor?: string }
 
 function averageRGB(data: Uint8ClampedArray): string {
   let r = 0, g = 0, b = 0
@@ -111,135 +108,32 @@ function averageRGB(data: Uint8ClampedArray): string {
   return `rgb(${Math.round(r / len)},${Math.round(g / len)},${Math.round(b / len)})`
 }
 
-// Convert a focal point (% of image) to CSS background-position (%) so that
-// the focal point is centered in the element.
-//
-// CSS: offset_y = bg_pos_y/100 * (element_h - scaled_h)
-// We want face_pixel_y = -offset_y + element_h/2
-//   => bg_pos_y = (face_pixel_y - element_h/2) / (scaled_h - element_h) * 100
-function focalToBgPos(focal: { x: number; y: number }, el: HTMLElement): { x: number; y: number } {
-  const elW = el.offsetWidth
-  const elH = el.offsetHeight
-  // background-size: cover with square Spotify images → rendered size = max dimension
-  const imgW = Math.max(elW, elH)
-  const imgH = imgW
-
-  const facePxX = (focal.x / 100) * imgW
-  const facePxY = (focal.y / 100) * imgH
-
-  const overflowX = imgW - elW
-  const overflowY = imgH - elH
-
-  const bgX = overflowX <= 0 ? 50 : Math.max(0, Math.min(100, (facePxX - elW / 2) / overflowX * 100))
-  const bgY = overflowY <= 0 ? 50 : Math.max(0, Math.min(100, (facePxY - elH / 2) / overflowY * 100))
-
-  return { x: bgX, y: bgY }
-}
-
-// Native face detection -------------------------------------------------------
-
-type NativeDetectedFace = {
-  boundingBox: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }
-}
-
-type NativeFaceDetector = {
-  detect: (source: CanvasImageSource) => Promise<NativeDetectedFace[]>
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var FaceDetector: ((new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => NativeFaceDetector) | undefined)
-}
-
-function scaleToCanvas(img: HTMLImageElement, scale: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(img.naturalWidth * scale)
-  canvas.height = Math.round(img.naturalHeight * scale)
-  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-  return canvas
-}
-
-async function detectNativeFace(img: HTMLImageElement): Promise<FacePos | null> {
-  if (!globalThis.FaceDetector) return null
-
-  try {
-    const detector = new globalThis.FaceDetector({ fastMode: true, maxDetectedFaces: 5 })
-    const faces = await detector.detect(img)
-    if (!faces.length) return null
-
-    let sumX = 0, sumY = 0, topMostY = Infinity
-    for (const { boundingBox } of faces) {
-      const x1 = boundingBox.x
-      const y1 = boundingBox.y
-      const x2 = boundingBox.x + boundingBox.width
-      const y2 = boundingBox.y + boundingBox.height
-      sumX += (x1 + x2) / 2
-      sumY += (y1 + y2) / 2
-      if (y1 < topMostY) topMostY = y1
+function extractEdgeColors(url: string): Promise<EdgeColors> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const scale = 0.25
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.naturalWidth * scale)
+        canvas.height = Math.round(img.naturalHeight * scale)
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const w = canvas.width, h = canvas.height
+        const leftW = Math.max(1, Math.round(w * 0.08))
+        const botH = Math.max(1, Math.round(h * 0.08))
+        resolve({
+          leftColor: averageRGB(ctx.getImageData(0, 0, leftW, h).data),
+          bottomColor: averageRGB(ctx.getImageData(0, h - botH, w, botH).data),
+        })
+      } catch {
+        resolve({})
+      }
     }
-
-    return {
-      x: Math.round((sumX / faces.length / img.naturalWidth) * 100),
-      y: Math.round((sumY / faces.length / img.naturalHeight) * 100),
-      topY: Math.max(0, Math.round((topMostY / img.naturalHeight) * 100)),
-    }
-  } catch {
-    return null
-  }
-}
-
-// ── Visual saliency (profiles, logos, objects, text) ─────────────────────────
-// Weighted centroid of high-contrast + high-saturation regions, biased toward
-// the upper-center of the frame where the subject's head almost always appears
-// in portrait / artist-photo compositions.
-function computeSaliencyPos(canvas: HTMLCanvasElement): FacePos {
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return DEFAULT_POS
-
-  const { width, height } = canvas
-  const { data } = ctx.getImageData(0, 0, width, height)
-
-  const step = Math.max(2, Math.floor(Math.min(width, height) / 64))
-  let totalW = 0, wX = 0, wY = 0
-
-  for (let y = step; y < height - step; y += step) {
-    for (let x = step; x < width - step; x += step) {
-      const i = (y * width + x) * 4
-      const r = data[i], g = data[i + 1], b = data[i + 2]
-
-      const gray = r * 0.299 + g * 0.587 + b * 0.114
-      const max = Math.max(r, g, b), min = Math.min(r, g, b)
-      const sat = max === 0 ? 0 : (max - min) / max
-
-      const ri = (y * width + Math.min(x + step, width - 1)) * 4
-      const bi = (Math.min(y + step, height - 1) * width + x) * 4
-      const grayR = data[ri] * 0.299 + data[ri + 1] * 0.587 + data[ri + 2] * 0.114
-      const grayB = data[bi] * 0.299 + data[bi + 1] * 0.587 + data[bi + 2] * 0.114
-      const grad = Math.abs(gray - grayR) + Math.abs(gray - grayB)
-
-      // Mild horizontal center bias only. A Y bias causes wrong results when
-      // the subject is in the lower portion of the frame, pulling the centroid
-      // upward and making the pan start far from the actual subject.
-      const dx = Math.abs(x / width - 0.5)
-      const bias = 1.15 - dx * 0.3  // 1.15× at centre-x, 1.0× at edges
-
-      const w = (grad + sat * 128) * bias
-      totalW += w; wX += x * w; wY += y * w
-    }
-  }
-
-  if (totalW === 0) return DEFAULT_POS
-
-  const cx = Math.round((wX / totalW / width) * 100)
-  const cy = Math.round((wY / totalW / height) * 100)
-  // Estimate head top: portraits usually have ~15-20% of head height above center
-  const topY = Math.max(0, cy - 18)
-  return { x: cx, y: cy, topY }
+    img.onerror = () => resolve({})
+    img.src = url
+  })
 }
 
 // ── Name width animation (module-level to avoid deep function nesting) ───────
@@ -271,9 +165,6 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   if (widthFallbackTimer !== null) { clearTimeout(widthFallbackTimer); widthFallbackTimer = null }
 
   // On touch devices skip the width morph — cross-fade the text.
-  // We must also suppress the wrap's transform transition during the swap;
-  // otherwise the translateX(-50%) centering animates when the container
-  // resizes, causing a visible lateral slide while the text is invisible.
   if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
     wrap.removeEventListener('transitionend', clearWidthTransition)
     pendingNameSwap = null
@@ -285,15 +176,13 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
 
     widthFallbackTimer = setTimeout(() => {
       widthFallbackTimer = null
-      // Disable wrap transitions so the width change doesn't animate translateX
       wrap.style.transition = 'none'
       text.textContent = name
-      void wrap.getBoundingClientRect()  // commit new layout instantly
-      wrap.style.transition = ''         // restore CSS transitions
+      void wrap.getBoundingClientRect()
+      wrap.style.transition = ''
 
       requestAnimationFrame(() => {
         text.style.opacity = '1'
-        // Clean up the inline transition after fade-in so gradient hover works
         widthFallbackTimer = setTimeout(() => {
           widthFallbackTimer = null
           text.style.transition = ''
@@ -306,7 +195,6 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   const prevWidth = wrap.offsetWidth
   const prevName = text.textContent ?? ''
 
-  // Temporarily inject new name with nowrap to measure target width, then restore
   text.style.whiteSpace = 'nowrap'
   text.textContent = name
   wrap.style.transition = 'none'
@@ -318,56 +206,18 @@ function animateNameWidth(wrap: HTMLDivElement, text: HTMLSpanElement, name: str
   wrap.style.width = `${prevWidth}px`
   wrap.getBoundingClientRect()
 
-  // Clip during the morph so the old (invisible) text can't visually bleed out
   wrap.style.overflow = 'hidden'
-  // Fade text out (old name), morph container, then swap text and fade in
   text.style.transition = 'opacity 0.3s ease'
   text.style.opacity = '0'
   pendingNameSwap = { text, name }
-  // Include transform so hover zoom stays smooth during a slide transition
   wrap.style.transition = 'width 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.45s cubic-bezier(0.22,1,0.36,1)'
   wrap.style.width = `${nextWidth}px`
   wrap.removeEventListener('transitionend', clearWidthTransition)
   wrap.addEventListener('transitionend', clearWidthTransition)
-  // Fallback: if transitionend doesn't fire (same-width names), swap after delay
   widthFallbackTimer = setTimeout(() => {
     widthFallbackTimer = null
     doNameSwap(wrap)
   }, 650)
-}
-
-// ── Detection entry point ────────────────────────────────────────────────────
-function preloadAndDetect(url: string): Promise<FacePos> {
-  return new Promise(resolve => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = async () => {
-      try {
-        const smallCanvas = scaleToCanvas(img, 0.25)
-
-        // Extract edge accent colors for gradient smoothing
-        let leftColor: string | undefined
-        let bottomColor: string | undefined
-        try {
-          const ctx = smallCanvas.getContext('2d')!
-          const w = smallCanvas.width, h = smallCanvas.height
-          const leftW = Math.max(1, Math.round(w * 0.08))
-          leftColor = averageRGB(ctx.getImageData(0, 0, leftW, h).data)
-          const botH = Math.max(1, Math.round(h * 0.08))
-          bottomColor = averageRGB(ctx.getImageData(0, h - botH, w, botH).data)
-        } catch { /* CORS blocked — skip color extraction */ }
-
-        const nativeFace = await detectNativeFace(img)
-        if (nativeFace) return resolve({ ...nativeFace, leftColor, bottomColor })
-
-        resolve({ ...computeSaliencyPos(smallCanvas), leftColor, bottomColor })
-      } catch {
-        resolve(DEFAULT_POS)
-      }
-    }
-    img.onerror = () => resolve(DEFAULT_POS)
-    img.src = url
-  })
 }
 
 // ── Artist list cache (localStorage, 1-hour TTL) ─────────────────────────────
@@ -397,7 +247,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
   const posRef = useRef(0)
   const activeRef = useRef<0 | 1>(0)
   const layerUrls = useRef<[string, string]>(['', ''])
-  const faceCache = useRef<Map<string, FacePos>>(new Map())
+  const colorCacheRef = useRef<Map<string, EdgeColors>>(new Map())
   const urlToName = useRef<Map<string, string>>(new Map())
   const nameWrapRef = useRef<HTMLDivElement>(null)
   const nameTextRef = useRef<HTMLSpanElement>(null)
@@ -424,62 +274,21 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
     return deckRef.current[posRef.current++]
   }, [])
 
-  const peekAhead = useCallback((count: number): string[] => {
-    const deck = deckRef.current
-    const pos = posRef.current
-    return Array.from({ length: count }, (_, i) => deck[(pos + i) % deck.length])
+  const cacheColors = useCallback((url: string): Promise<EdgeColors> => {
+    if (colorCacheRef.current.has(url)) return Promise.resolve(colorCacheRef.current.get(url)!)
+    return extractEdgeColors(url).then(colors => {
+      colorCacheRef.current.set(url, colors)
+      return colors
+    })
   }, [])
 
-  const cacheDetect = useCallback(async (url: string): Promise<FacePos> => {
-    if (faceCache.current.has(url)) return faceCache.current.get(url)!
-    const pos = await preloadAndDetect(url)
-    faceCache.current.set(url, pos)
-    return pos
-  }, [])
-
-  function startPan(slot: 0 | 1, url: string) {
-    const el = getBgEl(slot)
-    const isMobile = window.matchMedia('(max-width: 1024px)').matches
-    const focal = faceCache.current.get(url)
-
-    // Imperatively set accent base color (avoids React re-renders during transitions).
-    // This div sits BELOW the image; the image's mask makes its edge transparent so
-    // the accent color bleeds through — blending image into accent instead of into black.
+  function applyAccentColor(url: string) {
     const accentEl = accentGradientRef.current
-    if (accentEl) {
-      const color = isMobile ? (focal?.bottomColor ?? 'rgb(14,14,14)') : (focal?.leftColor ?? 'rgb(14,14,14)')
-      accentEl.style.background = color
-    }
-
-    if (isMobile) {
-      el.style.transition = 'none'
-      el.style.objectPosition = '50% 50%'
-      return
-    }
-
-    const focalPos = focal ?? DEFAULT_POS
-
-    // Pan starts just above the top of the head, ends at face/subject center
-    // Always center horizontally; only pan vertically to the face
-    const aboveHead = Math.max(0, focalPos.topY - HEAD_MARGIN)
-    const startX = 50
-    let startY = focalToBgPos({ x: focalPos.x, y: aboveHead }, el).y
-    const endX = 50
-    let endY = focalToBgPos(focalPos, el).y
-
-    // When the focal point is in the upper quarter of the image, focalToBgPos
-    // clamps both start and end to 0% — no visible movement. Fall back to a
-    // gentle top-to-centre pan so there's always some motion.
-    if (Math.abs(startY - endY) < 4 && Math.abs(startX - endX) < 4) {
-      startY = 0
-      endY = 30
-    }
-
-    el.style.transition = 'none'
-    el.style.objectPosition = `${startX}% ${startY}%`
-    el.getBoundingClientRect()
-    el.style.transition = `object-position ${SLIDE_DURATION + FADE_DURATION}ms linear`
-    el.style.objectPosition = `${endX}% ${endY}%`
+    if (!accentEl) return
+    const isMobile = window.matchMedia('(max-width: 1024px)').matches
+    const colors = colorCacheRef.current.get(url)
+    const color = isMobile ? (colors?.bottomColor ?? 'rgb(14,14,14)') : (colors?.leftColor ?? 'rgb(14,14,14)')
+    accentEl.style.background = color
   }
 
   function showNameFirst(url: string) {
@@ -531,45 +340,37 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
       const first = getNext()
       const second = getNext()
 
-      const firstDetection = cacheDetect(first)
-      const secondDetection = second === first ? firstDetection : cacheDetect(second)
-      await Promise.all([firstDetection, secondDetection])
-      if (cancelled) return
-
       getBgEl(0).src = first
       getBgEl(1).src = second
       layerUrls.current = [first, second]
 
-      startPan(0, first)
+      // Extract colors for first image and apply accent; preload second in background
+      cacheColors(first).then(colors => {
+        colorCacheRef.current.set(first, colors)
+        if (!cancelled) applyAccentColor(first)
+      })
+      cacheColors(second)
+
       fadeIn(0)
       showNameFirst(first)
       setReady(true)
-
-      for (const url of peekAhead(2)) cacheDetect(url)
     }
 
-    // SSR data → localStorage cache → network fetch (first-visit fallback)
     const immediate = initialArtists?.length ? initialArtists : loadCachedArtists()
     if (immediate) init(immediate)
 
     fetch('/api/artist-images', { signal: controller.signal })
       .then(async r => {
-        if (!r.ok) {
-          throw new Error(`Artist image request failed with ${r.status}`)
-        }
+        if (!r.ok) throw new Error(`Artist image request failed with ${r.status}`)
         return r.json()
       })
       .then(({ artists }: { artists: { url: string; name: string }[] }) => {
         if (cancelled) return
         saveCachedArtists(artists)
-        init(artists)  // no-op if already started
+        init(artists)
       })
-      .catch(() => {
-        // Keep the static hero usable even if the slideshow API is unavailable.
-      })
-      .finally(() => {
-        globalThis.clearTimeout(timeoutId)
-      })
+      .catch(() => {})
+      .finally(() => { globalThis.clearTimeout(timeoutId) })
 
     return () => {
       cancelled = true
@@ -589,7 +390,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
       const incoming = (outgoing === 0 ? 1 : 0) as 0 | 1
       const inUrl = layerUrls.current[incoming]
 
-      startPan(incoming, inUrl)
+      applyAccentColor(inUrl)
       fadeIn(incoming)
       fadeOut(outgoing)
       transitionName(inUrl)
@@ -600,8 +401,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
         const next = getNext()
         getBgEl(outgoing).src = next
         layerUrls.current[outgoing] = next
-        cacheDetect(next)
-        for (const url of peekAhead(2)) cacheDetect(url)
+        cacheColors(next)
       }, FADE_DURATION)
     }, SLIDE_DURATION)
 
@@ -617,9 +417,9 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: SLIDESHOW_STYLES }} />
 
-      {/* Bottommost base layer — solid accent color that the image edge blends into.
-          Must come BEFORE slideshow-container so it renders below the image (same z-auto stacking, DOM order wins).
-          transition: background-color syncs color change with the 1800ms image crossfade. */}
+      {/* Bottommost base layer — solid accent color extracted from the photo edge.
+          Sits below the image; the mask makes the image edge transparent so the
+          accent color shows through, blending photo into background. */}
       <div
         ref={accentGradientRef}
         className="absolute inset-0 pointer-events-none"
@@ -632,13 +432,13 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
           const mask = [
             'linear-gradient(to right,',
             '  transparent 0%,',
-            '  rgba(0,0,0,0.08) 8%,',
-            '  rgba(0,0,0,0.20) 18%,',
-            '  rgba(0,0,0,0.38) 28%,',
-            '  rgba(0,0,0,0.58) 37%,',
-            '  rgba(0,0,0,0.78) 46%,',
-            '  rgba(0,0,0,0.93) 52%,',
-            '  black 57%,',
+            '  rgba(0,0,0,0.08) 2%,',
+            '  rgba(0,0,0,0.20) 5%,',
+            '  rgba(0,0,0,0.38) 9%,',
+            '  rgba(0,0,0,0.58) 12%,',
+            '  rgba(0,0,0,0.78) 15%,',
+            '  rgba(0,0,0,0.93) 17%,',
+            '  black 18%,',
             '  black 100%',
             ')',
           ].join(' ')
@@ -654,10 +454,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
             ref={bg0Ref}
             alt=""
             className="absolute inset-0 w-full h-full"
-            style={{
-              objectFit: 'cover',
-              objectPosition: `50% 50%`,
-            }}
+            style={{ objectFit: 'cover', objectPosition: '50% 50%' }}
           />
         </div>
         <div
@@ -669,10 +466,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
             ref={bg1Ref}
             alt=""
             className="absolute inset-0 w-full h-full"
-            style={{
-              objectFit: 'cover',
-              objectPosition: `50% 50%`,
-            }}
+            style={{ objectFit: 'cover', objectPosition: '50% 50%' }}
           />
         </div>
       </div>

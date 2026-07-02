@@ -71,7 +71,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
       <div
         className="bg-gradient-overlay absolute inset-0 z-[1] pointer-events-none"
         style={{
-          background: 'linear-gradient(to right, #0e0e0e 10%, rgba(14,14,14,0.78) 24%, rgba(14,14,14,0.3) 38%, transparent 50%)',
+          background: 'linear-gradient(to right, #0e0e0e 18%, rgba(14,14,14,0.90) 29%, rgba(14,14,14,0.75) 40%, rgba(14,14,14,0.55) 51%, rgba(14,14,14,0.32) 63%, rgba(14,14,14,0.12) 74%, transparent 83%)',
         }}
       />
 
@@ -129,7 +129,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
 
         @media (max-width: 1024px) {
           .bg-gradient-overlay {
-            background: linear-gradient(to top, #0e0e0e 18%, rgba(14,14,14,0.78) 34%, rgba(14,14,14,0.3) 52%, transparent 66%) !important;
+            background: linear-gradient(to top, #0e0e0e 12%, rgba(14,14,14,0.90) 25%, rgba(14,14,14,0.75) 40%, rgba(14,14,14,0.55) 55%, rgba(14,14,14,0.32) 71%, rgba(14,14,14,0.12) 84%, transparent 96%) !important;
           }
           .ui-panel {
             top: auto !important;
