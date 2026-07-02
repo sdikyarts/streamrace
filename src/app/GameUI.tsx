@@ -43,7 +43,7 @@ const GAME_STYLES = `
   background-clip: text;
   transition: background-position 0.5s ease;
   padding-top: 0.15em;
-  padding-bottom: 0.12em;
+  padding-bottom: 0;
   padding-right: 0.15em;
   padding-left: 0.15em;
 }
@@ -137,7 +137,7 @@ function ArtistNameLabel({ name, compact }: Readonly<{ name: string; compact?: b
           fontFamily: 'var(--font-helvetica)',
           fontWeight: 700,
           fontStyle: 'italic',
-          fontSize: 'clamp(17px, 4vw, 34px)',
+          fontSize: 'clamp(22px, 5.5vw, 34px)',
           userSelect: 'none',
           textAlign: 'center',
           width: 'min(72vw, 480px)',
@@ -145,7 +145,7 @@ function ArtistNameLabel({ name, compact }: Readonly<{ name: string; compact?: b
           filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.4))',
         }}
       >
-        <span className="sr-name-line" style={{ padding: '0.9vh 1.6vw' }}>
+        <span className="sr-name-line" style={{ padding: '0.1vh 0.3vw' }}>
           <span className="sr-name-text" style={{ display: 'inline', padding: 0 }}>{name}</span>
         </span>
       </div>
@@ -156,12 +156,12 @@ function ArtistNameLabel({ name, compact }: Readonly<{ name: string; compact?: b
       className="sr-name-box"
       style={{
         backgroundColor: 'white',
-        padding: '0.32vh 0.8vw',
+        padding: '0.4vh 1vw 0 1vw',
         overflow: 'visible',
         fontFamily: 'var(--font-helvetica)',
         fontWeight: 700,
         fontStyle: 'italic',
-        fontSize: 'clamp(16px, 2vw, 34px)',
+        fontSize: 'clamp(18px, 2.4vw, 38px)',
         userSelect: 'none',
         boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
         maxWidth: 'min(40vw, 480px)',
@@ -186,7 +186,7 @@ function StreamCountDisplay({ streams, compact }: Readonly<{ streams: number; co
         backgroundSize: '200% 100%',
         // Figma: outer box 454×117, inner text 414×77 → ~20px padding each side.
         // At ~88px font: 20px vertical ≈ 2.2vh at 900px viewport height.
-        padding: compact ? '1.1vh 2.2vw' : '2vh 1.5vw',
+        padding: compact ? '1.1vh 2.2vw' : '2vh 2vw',
         boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
         userSelect: 'none',
       }}
@@ -198,7 +198,7 @@ function StreamCountDisplay({ streams, compact }: Readonly<{ streams: number; co
           justifyContent: 'center',
           color: '#FFFBF7',
           fontFamily: 'var(--font-burst)',
-          fontSize: compact ? 'clamp(38px, 10vw, 88px)' : 'clamp(30px, 5vw, 88px)',
+          fontSize: compact ? 'clamp(38px, 10vw, 88px)' : 'clamp(34px, 5.5vw, 88px)',
           lineHeight: 0.75,
           whiteSpace: 'nowrap',
           position: 'relative',
@@ -223,7 +223,7 @@ function DescText({ children, compact }: Readonly<{ children: React.ReactNode; c
         fontFamily: 'var(--font-helvetica)',
         fontWeight: 700,
         fontStyle: 'italic',
-        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(12px, 1.5vw, 24px)',
+        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(14px, 1.8vw, 28px)',
         textShadow: '0 1px 8px rgba(0,0,0,0.8)',
         textAlign: 'center',
         lineHeight: 1.3,
@@ -267,8 +267,8 @@ function GuessButton({
         // backgroundImage + backgroundSize inline; backgroundPosition in CSS
         backgroundImage: gradient,
         backgroundSize: '300% 100%',
-        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(13px, 1.5vw, 25px)',
-        padding: compact ? '0.75vh clamp(7px, 1.7vw, 20px)' : '0.75vh 0.75vw',
+        fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(15px, 1.8vw, 28px)',
+        padding: compact ? '0.75vh clamp(7px, 1.7vw, 20px)' : '0.9vh 1vw',
         border: 'none',
         boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
         fontFamily: 'var(--font-helvetica)',
@@ -324,10 +324,10 @@ function ScoreBox({
         filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
       }}
     >
-      <div style={{ ...rowBase, fontSize: compact ? 'clamp(10px, 2.3vw, 14px)' : 'clamp(10px, 1vw, 16px)', lineHeight: 1.2, padding: compact ? '0.25vh 1vw' : '0.25vh 0.6vw' }}>
+      <div style={{ ...rowBase, fontSize: compact ? 'clamp(10px, 2.3vw, 14px)' : 'clamp(11px, 1.2vw, 18px)', lineHeight: 1.2, padding: compact ? '0.25vh 1vw' : '0.3vh 0.8vw' }}>
         {label}
       </div>
-      <div style={{ ...rowBase, fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(14px, 1.65vw, 28px)', lineHeight: 1.15, padding: compact ? '0.25vh 1vw' : '0.25vh 0.6vw', marginTop: '-1px' }}>
+      <div style={{ ...rowBase, fontSize: compact ? 'clamp(14px, 4.5vw, 18px)' : 'clamp(16px, 2vw, 32px)', lineHeight: 1.15, padding: compact ? '0.25vh 1vw' : '0.3vh 0.8vw', marginTop: '-1px' }}>
         {value.toLocaleString('en-US')}
       </div>
     </div>
@@ -414,7 +414,7 @@ function ArtistPanel({
         quality={100}
         sizes="50vw"
         priority
-        style={{ objectFit: 'cover', objectPosition: 'center top' }}
+        style={{ objectFit: 'cover', objectPosition: compact ? 'center center' : 'center top' }}
       />
       {/* Dark overlay */}
       <div style={{ ...abs, background: 'rgba(0,0,0,0.45)' }} />
@@ -444,7 +444,7 @@ function ArtistPanel({
               flexDirection: 'column',
               gap: 'clamp(6px, 1vh, 14px)',
               // Figma: 270px wide at 960px panel = 28% of panel = 14vw
-              width: 'clamp(130px, 14vw, 270px)',
+              width: 'clamp(140px, 16vw, 300px)',
             }}
           >
             <GuessButton
@@ -834,12 +834,12 @@ export default function GameUI({
             className="sr-name-box"
             style={{
               backgroundColor: 'white',
-              padding: isDesktop ? '0.5vh 1.5vw' : '0.06vh 0.8vw',
+              padding: isDesktop ? '0.6vh 1.8vw' : '0.06vh 0.8vw',
               overflow: 'visible',
               fontFamily: 'var(--font-helvetica)',
               fontWeight: 700,
               fontStyle: 'italic',
-              fontSize: isDesktop ? 'clamp(26px, 3.2vw, 52px)' : 'clamp(24px, 7vw, 40px)',
+              fontSize: isDesktop ? 'clamp(30px, 3.8vw, 60px)' : 'clamp(24px, 7vw, 40px)',
               userSelect: 'none',
               boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
             }}
@@ -858,7 +858,7 @@ export default function GameUI({
               style={{
                 backgroundImage: 'linear-gradient(to right, #800C81, #E71616, #BEA500, #E71616, #800C81)',
                 backgroundSize: '200% 100%',
-                padding: isDesktop ? '2.5vh 2.5vw' : '1.1vh 2.2vw',
+                padding: isDesktop ? '2.5vh 3vw' : '1.1vh 2.2vw',
                 boxShadow: '0 2px 16px rgba(0,0,0,0.5)',
                 userSelect: 'none',
               }}
@@ -870,7 +870,7 @@ export default function GameUI({
                   justifyContent: 'center',
                   color: '#FFFBF7',
                   fontFamily: 'var(--font-burst)',
-                  fontSize: isDesktop ? 'clamp(50px, 8vw, 140px)' : 'clamp(55px, 14vw, 140px)',
+                  fontSize: isDesktop ? 'clamp(55px, 9vw, 140px)' : 'clamp(55px, 14vw, 140px)',
                   lineHeight: 0.75,
                   whiteSpace: 'nowrap',
                   position: 'relative',
@@ -885,12 +885,12 @@ export default function GameUI({
             <div
               className="sr-btn"
               style={{
-                width: 'clamp(200px, 22vw, 380px)',
+                width: 'clamp(220px, 26vw, 420px)',
                 color: '#FFFBF7',
                 backgroundImage: 'linear-gradient(to right, #800C81, #800C81 33%, #E71616 100%)',
                 backgroundSize: '300% 100%',
-                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
-                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
+                fontSize: isDesktop ? 'clamp(15px, 1.8vw, 28px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.9vh 1vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 fontFamily: 'var(--font-helvetica)',
                 fontWeight: 700,
@@ -913,12 +913,12 @@ export default function GameUI({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 'clamp(200px, 22vw, 380px)',
+                width: 'clamp(220px, 26vw, 420px)',
                 color: '#FFFBF7',
                 backgroundImage: 'linear-gradient(to right, #E71616, #E71616 33%, #BEA500 100%)',
                 backgroundSize: '300% 100%',
-                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
-                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
+                fontSize: isDesktop ? 'clamp(15px, 1.8vw, 28px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.9vh 1vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
                 border: 'none',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 fontFamily: 'var(--font-helvetica)',
@@ -938,11 +938,11 @@ export default function GameUI({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 'clamp(200px, 22vw, 380px)',
+                width: 'clamp(220px, 26vw, 420px)',
                 color: '#FFFBF7',
                 backgroundColor: '#6d6d6d',
-                fontSize: isDesktop ? 'clamp(13px, 1.5vw, 25px)' : 'clamp(14px, 4.5vw, 18px)',
-                padding: isDesktop ? '0.75vh 0.75vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
+                fontSize: isDesktop ? 'clamp(15px, 1.8vw, 28px)' : 'clamp(14px, 4.5vw, 18px)',
+                padding: isDesktop ? '0.9vh 1vw' : '0.75vh clamp(7px, 1.7vw, 20px)',
                 border: 'none',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 fontFamily: 'var(--font-helvetica)',

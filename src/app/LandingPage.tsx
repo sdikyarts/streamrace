@@ -177,7 +177,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
         style={{
           top: '50%',
           left: '8.7vw',
-          width: 'clamp(180px, 18.5vw, 350px)',
+          width: 'clamp(210px, 22vw, 400px)',
           transform: 'translateY(-50%)',
           fontFamily: 'var(--font-helvetica)',
           fontWeight: 700,
@@ -194,7 +194,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
 
         <p
           className="text-[#FFFBF7] zoom-el tagline"
-          style={{ fontSize: 'clamp(13px, 1.5vw, 25px)', lineHeight: 1.2, textShadow: '0 1px 8px rgba(0,0,0,0.6)', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.07s backwards' }}
+          style={{ fontSize: 'clamp(15px, 1.8vw, 28px)', lineHeight: 1.2, textShadow: '0 1px 8px rgba(0,0,0,0.6)', animation: 'flyInEl 0.55s cubic-bezier(0.22,1,0.36,1) 0.07s backwards' }}
         >
           <span className="block whitespace-nowrap">Not monthly listeners.</span>
           <span className="block whitespace-nowrap">The all-time stream race.</span>
@@ -208,8 +208,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
             className="start-btn flex items-center justify-between w-full text-[#FFFBF7] cursor-pointer zoom-el"
             style={{
-              fontSize: 'clamp(13px, 1.5vw, 25px)',
-              padding: '0.75vh 0.75vw',
+              fontSize: 'clamp(15px, 1.8vw, 28px)',
+              padding: '0.9vh 0.9vw',
               border: 'none',
               boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
             }}
@@ -248,8 +248,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
               onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
-                fontSize: 'clamp(13px, 1.5vw, 25px)',
-                padding: '0.75vh 0.75vw',
+                fontSize: 'clamp(15px, 1.8vw, 28px)',
+                padding: '0.9vh 0.9vw',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
               }}
             >
@@ -266,8 +266,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
               onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
-                fontSize: 'clamp(13px, 1.5vw, 25px)',
-                padding: '0.75vh 0.75vw',
+                fontSize: 'clamp(15px, 1.8vw, 28px)',
+                padding: '0.9vh 0.9vw',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
               }}
             >
@@ -283,8 +283,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
               onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
-                fontSize: 'clamp(13px, 1.5vw, 25px)',
-                padding: '0.75vh 0.75vw',
+                fontSize: 'clamp(15px, 1.8vw, 28px)',
+                padding: '0.9vh 0.9vw',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 border: 'none',
                 cursor: 'pointer',
@@ -307,8 +307,8 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
               onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
               onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
               style={{
-                fontSize: 'clamp(13px, 1.5vw, 25px)',
-                padding: '0.75vh 0.75vw',
+                fontSize: 'clamp(15px, 1.8vw, 28px)',
+                padding: '0.9vh 0.9vw',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                 border: 'none',
                 cursor: 'pointer',

@@ -63,14 +63,17 @@ const SLIDESHOW_STYLES = `
     bottom: calc(10dvh + var(--panel-h, 180px) + 2.5dvh) !important;
     transform: translateX(-50%) !important;
     transform-origin: center center !important;
-    padding: 3px 7px !important;
-    font-size: 13px !important;
+    padding: 2px 5px 1px 5px !important;
+    font-size: clamp(13px, 4vw, 17px) !important;
   }
   .artist-label-text {
     white-space: normal !important;
     text-align: center !important;
   }
   .artist-label-wrap:hover { transform: translateX(-50%) scale(1.06) !important; }
+}
+@media (max-width: 480px) {
+  .artist-label-wrap { padding: 1px 3px 0px 3px !important; }
 }
 @media (hover: none) {
   .artist-label-wrap:active { transform: translateX(-50%) scale(1.06) !important; }
@@ -412,16 +415,22 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
 
   function startPan(slot: 0 | 1, url: string) {
     const el = getBgEl(slot)
+
+    if (window.matchMedia('(max-width: 1024px)').matches) {
+      el.style.transition = 'none'
+      el.style.objectPosition = '50% 50%'
+      return
+    }
+
     const focal = faceCache.current.get(url) ?? DEFAULT_POS
 
     // Pan starts just above the top of the head, ends at face/subject center
+    // Always center horizontally; only pan vertically to the face
     const aboveHead = Math.max(0, focal.topY - HEAD_MARGIN)
-    const startPos = focalToBgPos({ x: focal.x, y: aboveHead }, el)
-    const startX = startPos.x
-    let startY = startPos.y
-    const endPos = focalToBgPos(focal, el)
-    const endX = endPos.x
-    let endY = endPos.y
+    const startX = 50
+    let startY = focalToBgPos({ x: focal.x, y: aboveHead }, el).y
+    const endX = 50
+    let endY = focalToBgPos(focal, el).y
 
     // When the focal point is in the upper quarter of the image, focalToBgPos
     // clamps both start and end to 0% — no visible movement. Fall back to a
@@ -604,7 +613,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
             className="absolute inset-0 w-full h-full"
             style={{
               objectFit: 'cover',
-              objectPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
+              objectPosition: `50% 50%`,
             }}
           />
         </div>
@@ -619,7 +628,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
             className="absolute inset-0 w-full h-full"
             style={{
               objectFit: 'cover',
-              objectPosition: `${DEFAULT_POS.x}% ${DEFAULT_POS.y}%`,
+              objectPosition: `50% 50%`,
             }}
           />
         </div>
@@ -634,7 +643,7 @@ export default function ArtistSlideshow({ initialArtists }: Readonly<{ initialAr
           top: 36,
           right: 36,
           backgroundColor: 'white',
-          padding: '0.4vh 0.4vw',
+          padding: '0.4vh 0.4vw 0.1vh 0.4vw',
           overflow: 'visible',
           fontFamily: 'var(--font-helvetica)',
           fontWeight: 700,
