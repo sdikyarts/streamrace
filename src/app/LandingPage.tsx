@@ -110,6 +110,23 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
         }
         .leads-link:hover { background-position: 65% 0%; }
 
+        .leaderboard-btn {
+          background-image: linear-gradient(to right, #c59003, #c59003 33%, #e8c400 100%);
+          background-size: 300% 100%;
+          background-position: 0% 0%;
+          transition: background-position 0.5s ease, transform 0.2s ease;
+        }
+        .leaderboard-btn:hover { background-position: 65% 0%; }
+
+        .about-btn {
+          background-image: linear-gradient(to right, #6d6d6d, #6d6d6d 33%, #909090 100%);
+          background-size: 300% 100%;
+          background-position: 0% 0%;
+          transition: background-position 0.5s ease, transform 0.2s ease;
+        }
+        .about-btn:hover { background-position: 65% 0%; }
+        .expand-overlay { display: none; }
+
         @media (max-width: 1024px) {
           .bg-gradient-overlay {
             background: linear-gradient(to top, #0e0e0e 18%, rgba(14,14,14,0.78) 34%, rgba(14,14,14,0.3) 52%, transparent 66%) !important;
@@ -128,7 +145,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             padding: 8px 10px !important;
             font-size: clamp(14px, 4.5vw, 18px) !important;
           }
-          .credits-link, .leads-link {
+          .credits-link, .leads-link, .leaderboard-btn, .about-btn {
             padding: 8px 10px !important;
             font-size: clamp(14px, 4.5vw, 18px) !important;
           }
@@ -136,8 +153,23 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
             font-size: clamp(14px, 4.5vw, 18px) !important;
             text-align: center !important;
           }
+          .expand-overlay { display: block; }
         }
       `}</style>
+
+      {/* Translucent black overlay — only visible on mobile/tablet when panel is expanded */}
+      <div
+        className="expand-overlay"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          background: 'rgba(0,0,0,0.6)',
+          opacity: expanded ? 1 : 0,
+          transition: 'opacity 0.35s ease',
+          pointerEvents: 'none',
+        }}
+      />
 
       <div
         ref={panelRef}
@@ -200,7 +232,7 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
           <div
             style={{
               overflow: expanded ? 'visible' : 'hidden',
-              maxHeight: expanded ? '300px' : '0',
+              maxHeight: expanded ? '600px' : '0',
               marginTop: expanded ? '1.2vh' : '0',
               opacity: expanded ? 1 : 0,
               transition: 'max-height 0.35s ease, margin-top 0.35s ease, opacity 0.15s ease',
@@ -244,6 +276,54 @@ export default function LandingPage({ initialArtists = [] }: Readonly<{ initialA
                 <path d="M16.1525 0C9.39791 0 3.95124 5.28542 3.61082 11.9325L0.170822 16.4654C-0.259178 17.0208 0.170822 17.9167 0.923322 17.9167H3.61082V23.2917C3.61082 25.2804 5.2054 26.875 7.19415 26.875H8.98582V32.25H21.5275V23.8471C25.7737 21.8404 28.6942 17.5583 28.6942 12.5417C28.6942 5.62583 23.1042 0 16.1525 0ZM15.2029 17.9167L8.98582 11.6458L11.4942 9.11958L15.2029 12.8462L22.6025 5.375L25.1108 7.90125L15.2029 17.9167Z" fill="#FFFBF7"/>
               </svg>
             </Link>
+
+            <button
+              className="leaderboard-btn flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              onTouchStart={(e) => applyTapStart(e.currentTarget, '65% 0%')}
+              onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
+              onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
+              style={{
+                fontSize: 'clamp(13px, 1.5vw, 25px)',
+                padding: '0.75vh 0.75vw',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-helvetica)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+              }}
+            >
+              <span className="whitespace-nowrap">Leaderboard</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" fill="none" style={{ height: '0.9em', width: 'auto', display: 'block', flexShrink: 0 }}>
+                <rect x="0" y="10" width="7" height="14" rx="1" fill="#FFFBF7"/>
+                <rect x="10.5" y="5" width="7" height="19" rx="1" fill="#FFFBF7"/>
+                <rect x="21" y="0" width="7" height="24" rx="1" fill="#FFFBF7"/>
+              </svg>
+            </button>
+
+            <button
+              className="about-btn flex items-center justify-between w-full text-[#FFFBF7] zoom-el"
+              onTouchStart={(e) => applyTapStart(e.currentTarget, '65% 0%')}
+              onTouchEnd={(e) => applyTapEnd(e.currentTarget)}
+              onTouchCancel={(e) => applyTapCancel(e.currentTarget)}
+              style={{
+                fontSize: 'clamp(13px, 1.5vw, 25px)',
+                padding: '0.75vh 0.75vw',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-helvetica)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+              }}
+            >
+              <span className="whitespace-nowrap">How To Play</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" style={{ height: '0.9em', width: 'auto', display: 'block', flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10.5" stroke="#FFFBF7" strokeWidth="2.5"/>
+                <path d="M9.5 9C9.5 7.6 10.6 6.5 12 6.5C13.4 6.5 14.5 7.6 14.5 9C14.5 10.4 13.4 11.5 12 11.5V13" stroke="#FFFBF7" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="16.5" r="1.5" fill="#FFFBF7"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
